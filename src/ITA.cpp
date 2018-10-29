@@ -273,16 +273,16 @@ public:
         sprintf(ut_file, "ut_projection_%.3f", t);
         writeScalarToFileProjection(energyDensity, e_file, params);
         writeVectorToFileProjection(flowVelocity, ut_file, 0, params);
+
         //propagate the density forward by one time step according to ITA EQN of Motion
         propagate(density, density_p, energyDensity, flowVelocity, params);
 
         //swap the density and previous value
-
         //this doesn't work?
         //std::swap(density, density_p);
 
         //value swap is clumsy
-
+        /*
         for (int is = 0; is < DIM; is++)
         {
           for (int iphip = 0; iphip < DIM_PHIP; iphip++)
@@ -290,7 +290,7 @@ public:
             density_p[is][iphip] = density[is][iphip];
           }
         }
-
+        */
       }
 
 

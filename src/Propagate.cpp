@@ -82,7 +82,7 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       float udotv = u0 - ux*vx - uy*vy;
       float udotv4 = pow(udotv, 4.0);
       float F_iso = eps / udotv4;
-      float diff = F_mom - F_iso;
+      float diff = F - F_iso;
       float G = -( vx*dF_dx + vy*dF_dy ) - gamma * eps_rt4 * (-udotv) * diff;
 
       //temporary
