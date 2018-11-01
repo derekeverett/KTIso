@@ -174,7 +174,7 @@ public:
       printf("GAMMA = %.2f \n", params.GAMMA);
       if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
       else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
-      else if (params.EOS_TYPE == 3) printf("Using EoS : Lattice QCD + HRG matched.\n");
+      else { printf("Not a valid EoS! \n"); exit(-1); }
 
       //allocate and initialize memory
       printf("Allocating memory\n");
@@ -197,48 +197,10 @@ public:
 
       //the previous value of the density F()
       float **density_p = NULL;
-      density_p = calloc2dArrayf(density, params.DIM, params.DIM_PHIP);
+      density_p = calloc2dArrayf(density_p, params.DIM, params.DIM_PHIP);
 
       //initialize energy density
-      //define a lower bound on energy density for all cells to regulate numerical noise in flow velocity in dilute regions
-      float lower_tolerance = 1.0e-7;
-
-      printf("setting initial conditions on energy density : ");
-      if (params.IC_ENERGY == 1)
-      {
-        initializeEllipticalGauss(energyDensity, 5.0, 5.0, params);
-        printf("Smooth Oblate Gaussian \n");
-      }
-      else if (params.IC_ENERGY == 2)
-      {
-        initializeEllipticalMCGauss(energyDensity, 5.0, 5.0,params);
-        printf("Fluctuating Oblate Gaussian \n");
-      }
-      else if (params.IC_ENERGY == 3)
-      {
-        readDensityFile(energyDensity, "initial_profiles/e", params);
-        printf("Reading from energy density file in initial_profiles/ \n");
-      }
-      else if (params.IC_ENERGY == 4)
-      {
-        readEnergyDensitySuperMCBlock(energyDensity, params);
-        printf("Reading from superMC energy density file in initial_profiles/ \n");
-      }
-      else if (params.IC_ENERGY == 5)
-      {
-        //read in initial energy density using the initiliaze_from_vector() function
-        //note that this is not safe - if one passes an empty vector it will not throw an error
-        //converting units of energy density from GeV / fm^3 to fm^(-4)
-        printf("Reading energy density from initial energy density vector\n");
-        //do a value copy
-        //try adding a small value everywhere to regulate problems with flow velocity in dilute regions
-        for (int i = 0; i < params.DIM; i++) energyDensity[i] = init_energy_density[i] / (float)HBARC + lower_tolerance;
-      }
-      else
-      {
-        printf("Not a valid initial Condition... Goodbye\n");
-        return 0;
-      }
+      initializeEnergyDensity(energyDensity, init_energy_density, params);
 
       //initialize the flow velocity
       initializeFlow(flowVelocity, params);
@@ -256,26 +218,35 @@ public:
       //convert the energy density profile into the density profile F(t, x, y ; phip) to be propagated
       initializeDensity(energyDensity, density_p, params);
 
+      //calculate entries in trig table - time independent in cartesian case
+      calculateHypertrigTable(hypertrigTable, params);
+
       //The main time step loop
       printf("Evolving T^munu via ITA Collision Dynamics \n");
-      for (int it = 1; it < DIM_T + 1; it++)
+
+      //write to file every write_freq steps
+      int write_freq = 1;
+      for (int it = 0; it < DIM_T; it++)
       {
         float t = t0 + it * dt;
         printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
-        calculateHypertrigTable(hypertrigTable, params);
         //calculate the ten independent components of the stress tensor by integrating over rapidity and phi_p
         calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-        char e_file[255] = "";
-        sprintf(e_file, "e_projection_%.3f", t);
-        char ut_file[255] = "";
-        sprintf(ut_file, "ut_projection_%.3f", t);
-        writeScalarToFileProjection(energyDensity, e_file, params);
-        writeVectorToFileProjection(flowVelocity, ut_file, 0, params);
+
+        if (it % write_freq == 0)
+        {
+          char e_file[255] = "";
+          sprintf(e_file, "e_projection_%.3f", t);
+          char ut_file[255] = "";
+          sprintf(ut_file, "ut_projection_%.3f", t);
+          writeScalarToFileProjection(energyDensity, e_file, params);
+          writeVectorToFileProjection(flowVelocity, ut_file, 0, params);
+        }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
-        propagate(density, density_p, energyDensity, flowVelocity, params);
+        //propagate(density, density_p, energyDensity, flowVelocity, params);
 
         //swap the density and previous value
         //this doesn't work?
@@ -292,6 +263,7 @@ public:
         }
         */
       }
+
 
 
       //variables to store the hydrodynamic variables after the Landau matching is performed

@@ -3,8 +3,10 @@
 #include <stdlib.h>
 #include <fstream>
 #include <string>
+#include <vector>
 #include "Parameter.h"
 #define THETA_FUNCTION(X) ((float)X < (float)0 ? (float)0 : (float)1)
+
 
 void initializeZero(float *density, parameters params)
 {
@@ -289,4 +291,88 @@ void readEnergyDensityTRENTO3DBlock(float *density, parameters params)
   }
   superMCFile.close();
   */
+}
+
+void readDensityFile(float *density, char name[255], parameters params)
+{
+  /*
+  int DIM_X = params.DIM_X;
+  int DIM_Y = params.DIM_Y;
+  int DIM_ETA = params.DIM_ETA;
+  float DX = params.DX;
+  float DY = params.DY;
+  float DETA = params.DETA;
+  float xmin = (-1.0) * ((float)(DIM_X-1) / 2.0) * DX;
+  float ymin = (-1.0) * ((float)(DIM_Y-1) / 2.0) * DY;
+  float etamin = (-1.0) * ((float)(DIM_ETA-1) / 2.0) * DETA;
+  float x, y, eta, value;
+
+  char filename[255] = "";
+  sprintf(filename, "%s.dat", name);
+  std::ifstream infile;
+  infile.open(filename);
+  if (!infile)
+  {
+    printf("Couldn't open initial profile!\n");
+    exit(1);
+  }
+  while (infile >> x >> y >> eta >> value)
+  {
+    int ix = (int)round((x - xmin) / DX);
+    int iy = (int)round((y - ymin) / DY);
+    int ieta = (int)round((eta - etamin) / DETA);
+    int is = (DIM_Y * DIM_ETA * ix) + (DIM_ETA * iy) + ieta;
+    density[is] = value;
+  }
+  infile.close();
+  */
+}
+
+int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy_density, parameters params)
+{
+  float hbarc = 0.197326938;
+
+  //initialize energy density
+  //define a lower bound on energy density for all cells to regulate numerical noise in flow velocity in dilute regions
+  float lower_tolerance = 1.0e-7;
+
+  int option = params.IC_ENERGY;
+
+  printf("setting initial conditions on energy density : ");
+  if (option == 1)
+  {
+    initializeEllipticalGauss(energyDensity, 5.0, 5.0, params);
+    printf("Smooth Oblate Gaussian \n");
+  }
+  else if (option == 2)
+  {
+    initializeEllipticalMCGauss(energyDensity, 5.0, 5.0,params);
+    printf("Fluctuating Oblate Gaussian \n");
+  }
+  else if (option == 3)
+  {
+    readDensityFile(energyDensity, "initial_profiles/e", params);
+    printf("Reading from energy density file in initial_profiles/ \n");
+  }
+  else if (option == 4)
+  {
+    readEnergyDensitySuperMCBlock(energyDensity, params);
+    printf("Reading from superMC energy density file in initial_profiles/ \n");
+  }
+  else if (option == 5)
+  {
+    //read in initial energy density using the initiliaze_from_vector() function
+    //note that this is not safe - if one passes an empty vector it will not throw an error
+    //converting units of energy density from GeV / fm^3 to fm^(-4)
+    printf("Reading energy density from initial energy density vector\n");
+    //do a value copy
+    //try adding a small value everywhere to regulate problems with flow velocity in dilute regions
+    for (int i = 0; i < params.DIM; i++) energyDensity[i] = init_energy_density[i] / (float)hbarc + lower_tolerance;
+  }
+  else
+  {
+    printf("Not a valid initial Condition... Goodbye\n");
+    return -1;
+  }
+
 }

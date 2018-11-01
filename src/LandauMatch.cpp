@@ -34,8 +34,8 @@ void calculateHypertrigTable(float **hypertrigTable, parameters params)
 
 void calculateStressTensor(float **stressTensor, float **density, float **hypertrigTable, parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
+  //int DIM_X = params.DIM_X;
+  //int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
   float d_phip = (2.0 * PI) / float(DIM_PHIP);
@@ -45,8 +45,8 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
     //#pragma omp parallel for simd
     for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
     {
-      int ix = is / (DIM_Y);
-      int iy = is - (DIM_Y * ix);
+      //int ix = is / (DIM_Y);
+      //int iy = is - (DIM_Y * ix);
       for (int iphip = 0; iphip < DIM_PHIP; iphip++)
       {
         stressTensor[ivar][is] += density[is][iphip] * hypertrigTable[ivar][iphip];
@@ -59,10 +59,10 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
 void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVelocity, parameters params)
 {
   int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  float DX = params.DX;
-  float DY = params.DY;
+  //int DIM_X = params.DIM_X;
+  //int DIM_Y = params.DIM_Y;
+  //float DX = params.DX;
+  //float DY = params.DY;
 
   float tolerance = 1.0e-5;
 
@@ -137,6 +137,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
         gsl_complex v3 = gsl_matrix_complex_get(eigen_vectors, 3 , i);
 
         if ( GSL_IMAG(v0) == 0 && ( 2.0 * GSL_REAL(v0) * GSL_REAL(v0) - 1.0  > 0.0 ) ) //choose timelike eigenvector
+        //if ( 2.0 * GSL_REAL(v0) * GSL_REAL(v0) - 1.0  > 0.0 ) //choose timelike eigenvector
         {
           double minkowskiLength = GSL_REAL(v0)*GSL_REAL(v0) - (GSL_REAL(v1)*GSL_REAL(v1) + GSL_REAL(v2)*GSL_REAL(v2) + GSL_REAL(v3)*GSL_REAL(v3));
           double factor = 1.0 / sqrt(minkowskiLength);

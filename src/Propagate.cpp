@@ -85,9 +85,10 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       float diff = F - F_iso;
       float G = -( vx*dF_dx + vy*dF_dy ) - gamma * eps_rt4 * (-udotv) * diff;
 
-      //temporary
+      //TEMPORARY REMOVE AFTER TESTING
       G = 0.0;
-
+      //TEMPORARY
+      
       density[is][iphip] = F + dt * G;
     }
   }

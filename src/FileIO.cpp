@@ -115,9 +115,10 @@ void writeVectorToFileProjection(float **var, char name[255], int idx, parameter
   myfile.close();
 }
 
+/*
 void readDensityFile(float *density, char name[255], parameters params)
 {
-  /*
+
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_ETA = params.DIM_ETA;
@@ -147,8 +148,9 @@ void readDensityFile(float *density, char name[255], parameters params)
     density[is] = value;
   }
   infile.close();
-  */
+
 }
+*/
 
 void readInParameters(struct parameters &params)
 {
