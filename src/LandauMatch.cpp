@@ -34,8 +34,6 @@ void calculateHypertrigTable(float **hypertrigTable, parameters params)
 
 void calculateStressTensor(float **stressTensor, float **density, float **hypertrigTable, parameters params)
 {
-  //int DIM_X = params.DIM_X;
-  //int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
   float d_phip = (2.0 * PI) / float(DIM_PHIP);
@@ -45,13 +43,12 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
     //#pragma omp parallel for simd
     for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
     {
-      //int ix = is / (DIM_Y);
-      //int iy = is - (DIM_Y * ix);
+      float integral = 0.0;
       for (int iphip = 0; iphip < DIM_PHIP; iphip++)
       {
-        stressTensor[ivar][is] += density[is][iphip] * hypertrigTable[ivar][iphip];
+        integral += density[is][iphip] * hypertrigTable[ivar][iphip];
       }
-      stressTensor[ivar][is] = stressTensor[ivar][is] * d_phip;
+      stressTensor[ivar][is] = integral * d_phip;
     } //for (int is = 0; is < DIM; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
 }

@@ -230,7 +230,7 @@ public:
       {
         float t = t0 + it * dt;
         printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
-        //calculate the ten independent components of the stress tensor by integrating over rapidity and phi_p
+        //calculate the ten independent components of the stress tensor by integrating over phi_p
         calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
