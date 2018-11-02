@@ -43,7 +43,7 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
-  //#pragma omp parallel for simd
+  #pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
   {
 
@@ -54,22 +54,28 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
     float eps = energyDensity[is];
     float eps_rt4 = pow(eps, 1.0/4.0);
 
+    int is_r, is_l, is_t, is_b;
+    if (is + x_stride < DIM) is_r = is + x_stride;
+    else is_r = is;
+
+    if (is - x_stride > 0 ) is_l = is - x_stride;
+    else is_l = is;
+
+    if (is + y_stride < DIM) is_t = is + y_stride;
+    else is_t = is;
+
+    if (is - y_stride > 0) is_b = is - y_stride;
+    else is_b = is;
+
     for (int iphip; iphip < DIM_PHIP; iphip++)
     {
       float F = density_p[is][iphip];
       float F_px, F_mx, F_py, F_my;
 
-      if (is + x_stride < DIM) F_px = density_p[is + x_stride][iphip];
-      else F_px = F;
-
-      if (is - x_stride > 0 ) F_mx = density_p[is - x_stride][iphip];
-      else F_mx = F;
-
-      if (is + y_stride < DIM) F_py = density_p[is + y_stride][iphip];
-      else F_py = F;
-
-      if (is - y_stride > 0) F_my = density_p[is - y_stride][iphip];
-      else F_my = F;
+      F_px = density_p[is_r][iphip];
+      F_mx = density_p[is_l][iphip];
+      F_py = density_p[is_t][iphip];
+      F_my = density_p[is_b][iphip];
 
       //using central differences for now
       float dF_dx = (F_px - F_mx) / (2.0 * dx);
@@ -82,13 +88,13 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       float udotv = u0 - ux*vx - uy*vy;
       float udotv4 = pow(udotv, 4.0);
       float F_iso = eps / udotv4;
-      float diff = F - F_iso;
-      float G = -( vx*dF_dx + vy*dF_dy ) - gamma * eps_rt4 * (-udotv) * diff;
+      float delta_F = F - F_iso;
+      float G = -( vx*dF_dx + vy*dF_dy ) - gamma * eps_rt4 * (-udotv) * delta_F;
 
       //TEMPORARY REMOVE AFTER TESTING
-      G = 0.0;
+      //G = 0.0;
       //TEMPORARY
-      
+
       density[is][iphip] = F + dt * G;
     }
   }

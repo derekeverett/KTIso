@@ -15,7 +15,7 @@
 void calculateHypertrigTable(float **hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
-  //#pragma omp parallel for simd
+  #pragma omp parallel for simd
   for (int iphip = 0; iphip < DIM_PHIP; iphip++)
   {
     float phip = float(iphip) * (2.0 * PI) / float(DIM_PHIP);
@@ -40,7 +40,7 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
 
   for (int ivar = 0; ivar < 10; ivar++)
   {
-    //#pragma omp parallel for simd
+    #pragma omp parallel for simd
     for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
     {
       float integral = 0.0;
@@ -56,14 +56,10 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
 void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVelocity, parameters params)
 {
   int DIM = params.DIM;
-  //int DIM_X = params.DIM_X;
-  //int DIM_Y = params.DIM_Y;
-  //float DX = params.DX;
-  //float DY = params.DY;
 
   float tolerance = 1.0e-5;
 
-  //#pragma omp parallel for simd
+  #pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
   {
     gsl_matrix *Tmunu; //T^(mu,nu) with two contravariant indices; we need to lower an index

@@ -341,12 +341,12 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   printf("setting initial conditions on energy density : ");
   if (option == 1)
   {
-    initializeEllipticalGauss(energyDensity, 5.0, 5.0, params);
+    initializeEllipticalGauss(energyDensity, 3.0, 3.0, params);
     printf("Smooth Oblate Gaussian \n");
   }
   else if (option == 2)
   {
-    initializeEllipticalMCGauss(energyDensity, 5.0, 5.0,params);
+    initializeEllipticalMCGauss(energyDensity, 3.0, 3.0,params);
     printf("Fluctuating Oblate Gaussian \n");
   }
   else if (option == 3)

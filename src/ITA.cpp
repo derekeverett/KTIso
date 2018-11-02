@@ -135,11 +135,10 @@ public:
 
     //where the magic happens
     int ITA::run_ita() {
-
       printf("Welcome to ITA\n");
       //declare parameter struct
       struct parameters params;
-      //set default parameters in case of missing freestream_input file
+      //set default parameters in case of missing ita_input file
       params.OUTPUTFORMAT = 2;
       params.IC_ENERGY = 5;
       params.DIM_X = 101;
@@ -201,10 +200,8 @@ public:
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
-
       //initialize the flow velocity
       initializeFlow(flowVelocity, params);
-
       //write initial energy density  to file
       writeScalarToFile(energyDensity, "initial_e", params);
       writeScalarToFileProjection(energyDensity, "initial_e_projection", params);
@@ -217,7 +214,6 @@ public:
 
       //convert the energy density profile into the density profile F(t, x, y ; phip) to be propagated
       initializeDensity(energyDensity, density_p, params);
-
       //calculate entries in trig table - time independent in cartesian case
       calculateHypertrigTable(hypertrigTable, params);
 
@@ -246,14 +242,13 @@ public:
         }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
-        //propagate(density, density_p, energyDensity, flowVelocity, params);
+        propagate(density, density_p, energyDensity, flowVelocity, params);
 
         //swap the density and previous value
-        //this doesn't work?
         //std::swap(density, density_p);
 
         //value swap is clumsy
-        /*
+
         for (int is = 0; is < DIM; is++)
         {
           for (int iphip = 0; iphip < DIM_PHIP; iphip++)
@@ -261,7 +256,7 @@ public:
             density_p[is][iphip] = density[is][iphip];
           }
         }
-        */
+        
       }
 
 
