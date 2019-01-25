@@ -14,6 +14,7 @@ struct parameters
   int EOS_TYPE;
   float E_FREEZE;
   float GAMMA;
+  float THETA; 
   //these are computed based on the chosen parameters above; they are constrained
   int DIM;
   //float TAU;

@@ -3,7 +3,6 @@
 #ifndef SRC_ITA_
 #define SRC_ITA_
 
-//#include "Parameter.h"
 #include "Propagate.cpp"
 #include "InitialConditions.cpp"
 #include "LandauMatch.cpp"
@@ -14,15 +13,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-
 #include <vector>
 
 #ifdef _OPENMP
 #include <omp.h>
 #endif
-
-#define PI 3.141592654f
-#define HBARC 0.197326938 //used to convert units of input / output hydro vectors
 
 using namespace std;
 
@@ -175,6 +170,8 @@ public:
       else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
       else { printf("Not a valid EoS! \n"); exit(-1); }
 
+      const double hbarc = 0.197326938;
+
       //allocate and initialize memory
       printf("Allocating memory\n");
       //the ten independent components of the stress tensor
@@ -231,6 +228,9 @@ public:
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
+        //solve for shear stress also
+        //then use CORNELIUS to construct a freezeout surface
+
         if (it % write_freq == 0)
         {
           char e_file[255] = "";
@@ -256,10 +256,8 @@ public:
             density_p[is][iphip] = density[is][iphip];
           }
         }
-        
+
       }
-
-
 
       //variables to store the hydrodynamic variables after the Landau matching is performed
       //the pressure
@@ -285,7 +283,7 @@ public:
       float totalEnergyInsideHypersurf = 0.0;
       for (int is = 0; is < params.DIM; is++)
       {
-        if ( (energyDensity[is] * HBARC) > params.E_FREEZE) totalEnergyInsideHypersurf += energyDensity[is];
+        if ( (energyDensity[is] * hbarc) > params.E_FREEZE) totalEnergyInsideHypersurf += energyDensity[is];
       }
       totalEnergyInsideHypersurf *= (params.DX * params.DY);
       printf("Fraction of energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfter);
@@ -327,7 +325,6 @@ public:
       writeVectorToFileProjection(flowVelocity, "u_x_projection", 1,params);
       writeVectorToFileProjection(flowVelocity, "u_y_projection", 2,params);
       writeVectorToFileProjection(flowVelocity, "u_eta_projection", 3,params);
-
 
       writeVectorToFile(shearTensor, "pi_tau_tau", 0,params);
       writeVectorToFile(shearTensor, "pi_tau_x", 1,params);
@@ -375,23 +372,23 @@ public:
         for (int is = 0; is < params.DIM; is++)
         {
           //converting back to GeV / fm^3 for use in JETSCAPE
-          final_energy_density[is] = (double)energyDensity[is] * HBARC;
-          final_pressure[is] = (double)pressure[is] * HBARC;
+          final_energy_density[is] = (double)energyDensity[is] * hbarc;
+          final_pressure[is] = (double)pressure[is] * hbarc;
           final_ut[is] = (double)flowVelocity[0][is];
           final_ux[is] = (double)flowVelocity[1][is];
           final_uy[is] = (double)flowVelocity[2][is];
           final_un[is] = (double)flowVelocity[3][is];
-          final_pitt[is] = (double)shearTensor[0][is] * HBARC;
-          final_pitx[is] = (double)shearTensor[1][is] * HBARC;
-          final_pity[is] = (double)shearTensor[2][is] * HBARC;
-          final_pitn[is] = (double)shearTensor[3][is] * HBARC;
-          final_pixx[is] = (double)shearTensor[4][is] * HBARC;
-          final_pixy[is] = (double)shearTensor[5][is] * HBARC;
-          final_pixn[is] = (double)shearTensor[6][is] * HBARC;
-          final_piyy[is] = (double)shearTensor[7][is] * HBARC;
-          final_piyn[is] = (double)shearTensor[8][is] * HBARC;
-          final_pinn[is] = (double)shearTensor[9][is] * HBARC;
-          final_Pi[is] = (double)bulkPressure[is] * HBARC;
+          final_pitt[is] = (double)shearTensor[0][is] * hbarc;
+          final_pitx[is] = (double)shearTensor[1][is] * hbarc;
+          final_pity[is] = (double)shearTensor[2][is] * hbarc;
+          final_pitn[is] = (double)shearTensor[3][is] * hbarc;
+          final_pixx[is] = (double)shearTensor[4][is] * hbarc;
+          final_pixy[is] = (double)shearTensor[5][is] * hbarc;
+          final_pixn[is] = (double)shearTensor[6][is] * hbarc;
+          final_piyy[is] = (double)shearTensor[7][is] * hbarc;
+          final_piyn[is] = (double)shearTensor[8][is] * hbarc;
+          final_pinn[is] = (double)shearTensor[9][is] * hbarc;
+          final_Pi[is] = (double)bulkPressure[is] * hbarc;
         }
       }
 

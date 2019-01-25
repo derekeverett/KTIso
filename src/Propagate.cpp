@@ -8,8 +8,6 @@
 #include <accelmath.h>
 #endif
 
-#define PI 3.141592654f
-
 //this creates the initial F function, a function of spatial coordinates and momentum angles
 void initializeDensity(float *energyDensity, float **density, parameters params)
 {
@@ -19,7 +17,7 @@ void initializeDensity(float *energyDensity, float **density, parameters params)
   //#pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
   {
-    float val = energyDensity[is] / (2.0 * PI);
+    float val = energyDensity[is] / (2.0 * M_PI);
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
       density[is][iphip] = val;
@@ -39,6 +37,7 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
   float dt = params.DT;
   float dx = params.DX;
   float dy = params.DY;
+  float theta = params.THETA;
 
   //using is = DIM_Y * ix + iy
   int x_stride = DIM_Y;
@@ -84,10 +83,10 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       //float dF_dy = (F_py - F_my) / (2.0 * dy);
 
       //using approximateDerivative
-      float dF_dx = approximateDerivative(F_mx, F, F_px) / dx;
-      float dF_dy = approximateDerivative(F_my, F, F_py) / dy;
+      float dF_dx = approximateDerivative(F_mx, F, F_px, theta) / dx;
+      float dF_dy = approximateDerivative(F_my, F, F_py, theta) / dy;
 
-      float phip = float(iphip) * (2.0 * PI) / float(DIM_PHIP);
+      float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
       float vx = cos(phip);
       float vy = sin(phip);
 

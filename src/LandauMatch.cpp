@@ -9,8 +9,6 @@
 #include <gsl/gsl_sort_vector.h>
 //#include <math.h>
 #include "Parameter.h"
-#define PI 3.141592654f
-#define GAMMA_MAX 50.0
 
 void calculateHypertrigTable(float **hypertrigTable, parameters params)
 {
@@ -18,7 +16,7 @@ void calculateHypertrigTable(float **hypertrigTable, parameters params)
   #pragma omp parallel for simd
   for (int iphip = 0; iphip < DIM_PHIP; iphip++)
   {
-    float phip = float(iphip) * (2.0 * PI) / float(DIM_PHIP);
+    float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
     hypertrigTable[0][iphip] = 1.0; //p^t, p^t component
     hypertrigTable[1][iphip] = cos(phip); //p^t, p^x
     hypertrigTable[2][iphip] = sin(phip); //p^t, p^y
@@ -36,7 +34,7 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
-  float d_phip = (2.0 * PI) / float(DIM_PHIP);
+  float d_phip = (2.0 * M_PI) / float(DIM_PHIP);
 
   for (int ivar = 0; ivar < 10; ivar++)
   {
@@ -58,6 +56,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
   int DIM = params.DIM;
 
   float tolerance = 1.0e-5;
+  float gamma_max = 50.0;
 
   #pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
@@ -137,7 +136,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
           if (GSL_REAL(v0) < 0) factor=-factor;
 
           //ignore eigenvectors with gamma too large
-          if ( (GSL_REAL(v0) * factor) < GAMMA_MAX)
+          if ( (GSL_REAL(v0) * factor) < gamma_max)
           {
             eigenvalue_exists = 1;
             energyDensity[is] = GSL_REAL(eigenvalue);
