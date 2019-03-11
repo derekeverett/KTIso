@@ -169,8 +169,6 @@ public:
       printf("T0 = %.2f fm/c\n", params.T0);
       printf("DIM_T = %d \n", params.DIM_T);
       printf("E_FREEZE = %.3f GeV / fm^3 \n", params.E_FREEZE);
-
-      //printf("GAMMA = %.2f \n", params.GAMMA);
       printf("tau_iso = %.2f \n", params.TAU_ISO);
 
       if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
@@ -207,8 +205,8 @@ public:
       //initialize the flow velocity
       initializeFlow(flowVelocity, params);
       //write initial energy density  to file
-      writeScalarToFile(energyDensity, "initial_e", params);
-      writeScalarToFileProjection(energyDensity, "initial_e_projection", params);
+      writeScalarToFile(energyDensity, (char *)"initial_e", params);
+      writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
 
       //calculate total energy to check convergence
       float totalEnergy = 0.0;
@@ -252,7 +250,6 @@ public:
       */
       //FREEZEOUT
 
-
       //write to file every write_freq steps
       int write_freq = 1;
 
@@ -261,6 +258,7 @@ public:
       {
         float t = t0 + it * dt;
         printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
+
         //calculate the ten independent components of the stress tensor by integrating over phi_p
         calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
         //solve the eigenvalue problem for the energy density and flow velocity
@@ -334,8 +332,8 @@ public:
       R_pimunu_Inv = (float *)calloc(params.DIM, sizeof(float));
       calculateBulkInvReynolds(pressure, bulkPressure, R_Pi_Inv, params);
       calculateShearInvReynolds(energyDensity, pressure, shearTensor, R_pimunu_Inv, params);
-      writeScalarToFileProjection(R_Pi_Inv, "R_Pi_Inv_projection", params);
-      writeScalarToFileProjection(R_pimunu_Inv, "R_pimunu_Inv_projection", params);
+      writeScalarToFileProjection(R_Pi_Inv, (char *)"R_Pi_Inv_projection", params);
+      writeScalarToFileProjection(R_pimunu_Inv, (char *)"R_pimunu_Inv_projection", params);
       //int ctr = (DIM_Y * DIM_ETA * ((DIM_X - 1) / 2)) + (DIM_ETA * ((DIM_Y - 1) / 2)) + ((DIM_ETA - 1) / 2);
       //printf("R_Pi_Inv at center : %f \n", R_Pi_Inv[ctr]);
       //printf("R_pimunu_Inv at center : %f \n", R_pimunu_Inv[ctr]);
@@ -346,44 +344,44 @@ public:
 
       printf("writing hydro variables\n");
 
-      writeScalarToFile(energyDensity, "e", params);
-      writeScalarToFile(pressure, "p", params);
-      writeScalarToFile(bulkPressure, "bulk_PI", params);
-      writeScalarToFileProjection(energyDensity, "e_projection", params);
-      writeScalarToFileProjection(pressure, "p_projection", params);
-      writeScalarToFileProjection(bulkPressure, "bulk_PI_projection", params);
+      writeScalarToFile(energyDensity, (char *)"e", params);
+      writeScalarToFile(pressure, (char *)"p", params);
+      writeScalarToFile(bulkPressure, (char *)"bulk_PI", params);
+      writeScalarToFileProjection(energyDensity, (char *)"e_projection", params);
+      writeScalarToFileProjection(pressure, (char *)"p_projection", params);
+      writeScalarToFileProjection(bulkPressure, (char *)"bulk_PI_projection", params);
 
-      writeVectorToFile(flowVelocity, "u_tau", 0, params);
-      writeVectorToFile(flowVelocity, "u_x", 1, params);
-      writeVectorToFile(flowVelocity, "u_y", 2,params);
-      writeVectorToFile(flowVelocity, "u_eta", 3,params);
+      writeVectorToFile(flowVelocity, (char *)"u_tau", 0, params);
+      writeVectorToFile(flowVelocity, (char *)"u_x", 1, params);
+      writeVectorToFile(flowVelocity, (char *)"u_y", 2,params);
+      writeVectorToFile(flowVelocity, (char *)"u_eta", 3,params);
 
-      writeVectorToFileProjection(flowVelocity, "u_tau_projection", 0,params);
-      writeVectorToFileProjection(flowVelocity, "u_x_projection", 1,params);
-      writeVectorToFileProjection(flowVelocity, "u_y_projection", 2,params);
-      writeVectorToFileProjection(flowVelocity, "u_eta_projection", 3,params);
+      writeVectorToFileProjection(flowVelocity, (char *)"u_tau_projection", 0,params);
+      writeVectorToFileProjection(flowVelocity, (char *)"u_x_projection", 1,params);
+      writeVectorToFileProjection(flowVelocity, (char *)"u_y_projection", 2,params);
+      writeVectorToFileProjection(flowVelocity, (char *)"u_eta_projection", 3,params);
 
-      writeVectorToFile(shearTensor, "pi_tau_tau", 0,params);
-      writeVectorToFile(shearTensor, "pi_tau_x", 1,params);
-      writeVectorToFile(shearTensor, "pi_tau_y", 2,params);
-      writeVectorToFile(shearTensor, "pi_tau_eta", 3,params);
-      writeVectorToFile(shearTensor, "pi_x_x", 4,params);
-      writeVectorToFile(shearTensor, "pi_x_y", 5,params);
-      writeVectorToFile(shearTensor, "pi_x_eta", 6,params);
-      writeVectorToFile(shearTensor, "pi_y_y", 7,params);
-      writeVectorToFile(shearTensor, "pi_y_eta", 8,params);
-      writeVectorToFile(shearTensor, "pi_eta_eta", 9,params);
+      writeVectorToFile(shearTensor, (char *)"pi_tau_tau", 0,params);
+      writeVectorToFile(shearTensor, (char *)"pi_tau_x", 1,params);
+      writeVectorToFile(shearTensor, (char *)"pi_tau_y", 2,params);
+      writeVectorToFile(shearTensor, (char *)"pi_tau_eta", 3,params);
+      writeVectorToFile(shearTensor, (char *)"pi_x_x", 4,params);
+      writeVectorToFile(shearTensor, (char *)"pi_x_y", 5,params);
+      writeVectorToFile(shearTensor, (char *)"pi_x_eta", 6,params);
+      writeVectorToFile(shearTensor, (char *)"pi_y_y", 7,params);
+      writeVectorToFile(shearTensor, (char *)"pi_y_eta", 8,params);
+      writeVectorToFile(shearTensor, (char *)"pi_eta_eta", 9,params);
 
-      writeVectorToFileProjection(shearTensor, "pi_tau_tau_projection", 0,params);
-      writeVectorToFileProjection(shearTensor, "pi_tau_x_projection", 1,params);
-      writeVectorToFileProjection(shearTensor, "pi_tau_y_projection", 2,params);
-      writeVectorToFileProjection(shearTensor, "pi_tau_eta_projection", 3,params);
-      writeVectorToFileProjection(shearTensor, "pi_x_x_projection", 4,params);
-      writeVectorToFileProjection(shearTensor, "pi_x_y_projection", 5,params);
-      writeVectorToFileProjection(shearTensor, "pi_x_eta_projection", 6,params);
-      writeVectorToFileProjection(shearTensor, "pi_y_y_projection", 7,params);
-      writeVectorToFileProjection(shearTensor, "pi_y_eta_projection", 8,params);
-      writeVectorToFileProjection(shearTensor, "pi_eta_eta_projection", 9,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_tau_tau_projection", 0,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_tau_x_projection", 1,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_tau_y_projection", 2,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_tau_eta_projection", 3,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_x_x_projection", 4,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_x_y_projection", 5,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_x_eta_projection", 6,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_y_y_projection", 7,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_y_eta_projection", 8,params);
+      writeVectorToFileProjection(shearTensor, (char *)"pi_eta_eta_projection", 9,params);
 
       //support for JETSCAPE - write hydro variables to vectors
       final_energy_density.resize(params.DIM);

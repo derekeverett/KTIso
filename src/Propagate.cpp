@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "Parameter.h"
 #include "NTScheme.cpp"
+#include <iostream>
 
 #ifdef _OPENACC
 #include <accelmath.h>
@@ -28,7 +29,6 @@ void initializeDensity(float *energyDensity, float **density, parameters params)
 
 void propagate(float **density, float **density_p, float *energyDensity, float **flowVelocity, parameters params)
 {
-
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
@@ -44,9 +44,10 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
-  #pragma omp parallel for simd
+  //#pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
   {
+    //std::cout << "is = " << is << "\n";
 
     float u0 = flowVelocity[0][is];
     float ux = flowVelocity[1][is];
@@ -71,7 +72,7 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
     if (is - y_stride > 0) is_b = is - y_stride;
     else is_b = is;
 
-    for (int iphip; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
       float F = density_p[is][iphip];
       float F_px, F_mx, F_py, F_my;
@@ -117,7 +118,6 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
 
       //update the value of F(x; phip)
       density[is][iphip] = F_new;
-
 
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)

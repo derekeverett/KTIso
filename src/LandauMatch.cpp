@@ -9,6 +9,7 @@
 #include <gsl/gsl_sort_vector.h>
 //#include <math.h>
 #include "Parameter.h"
+#include <iostream>
 
 void calculateHypertrigTable(float **hypertrigTable, parameters params)
 {
@@ -58,7 +59,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
   float tolerance = 1.0e-5;
   float gamma_max = 100.0;
 
-  #pragma omp parallel for simd
+  //#pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)
   {
     gsl_matrix *Tmunu; //T^(mu,nu) with two contravariant indices; we need to lower an index
@@ -73,7 +74,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
 
     //set the values of the energy momentum tensor
     //try adding a small value everywhere to T^tt make flow velocity look nicer
-    gsl_matrix_set(Tmunu, 0, 0, stressTensor[0][is] + tolerance); //t,t
+    gsl_matrix_set(Tmunu, 0, 0, stressTensor[0][is]); //t,t
     gsl_matrix_set(Tmunu, 0, 1, stressTensor[1][is]); //t,x
     gsl_matrix_set(Tmunu, 0, 2, stressTensor[2][is]); //t,y
     gsl_matrix_set(Tmunu, 0, 3, stressTensor[3][is]); //t,z
@@ -121,7 +122,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
     {
       gsl_complex eigenvalue = gsl_vector_complex_get(eigen_values, i);
       //eigenvalue condition taken from JF's suggestion, test for robustness in dilute region
-      if ( GSL_REAL(eigenvalue) > 0.0 && fabs( GSL_IMAG(eigenvalue) ) < ( fabs(GSL_REAL(eigenvalue)) * 1.0e-10) ) //choose eigenvalue
+      if ( GSL_REAL(eigenvalue) > 0.0 && fabs( GSL_IMAG(eigenvalue) ) < ( fabs(GSL_REAL(eigenvalue)) * 1.0e-30) ) //choose eigenvalue
       {
         gsl_complex v0 = gsl_matrix_complex_get(eigen_vectors, 0 , i);
         gsl_complex v1 = gsl_matrix_complex_get(eigen_vectors, 1 , i);
@@ -152,7 +153,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
     if (eigenvalue_exists == 0)
     {
       //in dilute regions where we can't find a timelike eigenvector, set e = 0, u^t = 1, u^x=u^y=u^n=0
-      energyDensity[is] = 1.0e-3;
+      energyDensity[is] = 1.0e-7;
       flowVelocity[0][is] = 1.0;
       flowVelocity[1][is] = 0.0;
       flowVelocity[2][is] = 0.0;
