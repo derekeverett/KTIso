@@ -56,7 +56,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
   int DIM = params.DIM;
 
   float tolerance = 1.0e-5;
-  float gamma_max = 50.0;
+  float gamma_max = 100.0;
 
   #pragma omp parallel for simd
   for (int is = 0; is < DIM; is++)

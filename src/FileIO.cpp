@@ -193,7 +193,8 @@ void readInParameters(struct parameters &params)
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.E_FREEZE = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.GAMMA = dummyFloat;
+    //params.GAMMA = dummyFloat;
+    params.TAU_ISO = dummyFloat;
     fclose(fileIn);
 
   }

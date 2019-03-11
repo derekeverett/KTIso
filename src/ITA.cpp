@@ -10,6 +10,8 @@
 #include "HydroValidity.cpp"
 #include "Memoryf.cpp"
 #include "FileIO.cpp"
+//#include "FreezeOut.cpp"
+//#include "cornelius-c++-1.3/cornelius.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -158,6 +160,8 @@ public:
       int DIM_PHIP = params.DIM_PHIP;
       float t0 = params.T0;
       float dt = params.DT;
+      float dx = params.DX;
+      float dy = params.DY;
 
       printf("Parameters are ...\n");
       printf("(DIM_X, DIM_Y, DIM_PHIP) = (%d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP);
@@ -165,7 +169,10 @@ public:
       printf("T0 = %.2f fm/c\n", params.T0);
       printf("DIM_T = %d \n", params.DIM_T);
       printf("E_FREEZE = %.3f GeV / fm^3 \n", params.E_FREEZE);
-      printf("GAMMA = %.2f \n", params.GAMMA);
+
+      //printf("GAMMA = %.2f \n", params.GAMMA);
+      printf("tau_iso = %.2f \n", params.TAU_ISO);
+
       if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
       else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
       else { printf("Not a valid EoS! \n"); exit(-1); }
@@ -217,8 +224,39 @@ public:
       //The main time step loop
       printf("Evolving T^munu via ITA Collision Dynamics \n");
 
+
+      //FREEZEOUT
+      //initialize cornelius for freezeout surface finding
+      /*
+      int dim;
+      float *lattice_spacing;
+      dim = 3;
+      lattice_spacing = new float[dim];
+      lattice_spacing[0] = dt;
+      lattice_spacing[1] = dx;
+      lattice_spacing[2] = dy;
+
+      float ****energy_density_evoution;
+      energy_density_evoution = calloc4dArrayf(energy_density_evoution, 2, DIM_X, DIM_Y, 1);
+      //make an array to store all the hydrodynamic variables
+      //to be written to file once the freezeout surface is determined by the critical energy density
+      int n_hydro_vars = 10; //u1, u2, u3, e, pi11, pi12, pi13, pi22, pi23, Pi (the temperature and pressure are calclated with EoS)
+      float *****hydrodynamic_evoution;
+      hydrodynamic_evoution = calloc5dArrayf(hydrodynamic_evoution, n_hydro_vars, 2, DIM_X, DIM_Y, 1);
+      //for 2+1D simulations
+      float ***hyperCube3D;
+      hyperCube3D = calloc3dArrayf(hyperCube3D, 2, 2, 2);
+      //open the freezeout surface file
+      ofstream freezeoutSurfaceFile;
+      freezeoutSurfaceFile.open("output/surface.dat");
+      */
+      //FREEZEOUT
+
+
       //write to file every write_freq steps
       int write_freq = 1;
+
+      //MAIN TIME STEP LOOP
       for (int it = 0; it < DIM_T; it++)
       {
         float t = t0 + it * dt;
@@ -248,7 +286,6 @@ public:
         //std::swap(density, density_p);
 
         //value swap is clumsy
-
         for (int is = 0; is < DIM; is++)
         {
           for (int iphip = 0; iphip < DIM_PHIP; iphip++)
@@ -257,7 +294,7 @@ public:
           }
         }
 
-      }
+      } // for (int it = 0; it < DIM_T; it++)
 
       //variables to store the hydrodynamic variables after the Landau matching is performed
       //the pressure

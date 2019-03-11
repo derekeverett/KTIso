@@ -33,7 +33,7 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float gamma = params.GAMMA;
+  float tau_iso = params.TAU_ISO;
   float dt = params.DT;
   float dx = params.DX;
   float dy = params.DY;
@@ -53,7 +53,10 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
     float uy = flowVelocity[2][is];
 
     float eps = energyDensity[is];
-    float eps_rt4 = pow(eps, 1.0/4.0);
+
+    float F_iso = eps / ( u0*u0 + 0.5 * (ux*ux + uy*uy) );
+
+    F_iso /= (2.0 * M_PI);
 
     int is_r, is_l, is_t, is_b;
     if (is + x_stride < DIM) is_r = is + x_stride;
@@ -79,35 +82,34 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       F_my = density_p[is_b][iphip];
 
       //using central differences
-      //float dF_dx = (F_px - F_mx) / (2.0 * dx);
-      //float dF_dy = (F_py - F_my) / (2.0 * dy);
+      float dF_dx = (F_px - F_mx) / (2.0 * dx);
+      float dF_dy = (F_py - F_my) / (2.0 * dy);
 
-      //using approximateDerivative
-      float dF_dx = approximateDerivative(F_mx, F, F_px, theta) / dx;
-      float dF_dy = approximateDerivative(F_my, F, F_py, theta) / dy;
 
       float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
       float vx = cos(phip);
       float vy = sin(phip);
 
       float udotv = u0 - ux*vx - uy*vy;
-      float udotv4 = pow(udotv, 4.0);
-      float F_iso = eps / udotv4;
+
       float delta_F = F - F_iso;
 
-      float G = -( vx*dF_dx + vy*dF_dy ) - gamma * eps_rt4 * (-udotv) * delta_F;
-
-      //forward time centered space scheme is unstable
-      //density[is][iphip] = F + dt * G;
+      float coll = -delta_F * udotv / tau_iso; //the collision term
 
       //try the NT Scheme ; what are the flux terms ?
       //float flux_p_x =  vx * ()
       //density[is][iphip] = F_avg - (dt / dx) * (flux_p_x - flux_m_x) - (dt / dy) * (flux_p_y - flux_m_y)
 
-      //missing a term here that has the slopes!
-      //right now this is just LxF scheme
-      float F_avg = 0.25 * (F_px + F_mx + F_py + F_my);
-      density[is][iphip] = F_avg + dt * G;
+      //try the MacCormack Method
+      //predictor step (forward differences)
+      float F_pred_x = -dt * (vx * (F_px - F) / dx);
+      float F_pred_y = -dt * (vy * (F_py - F) / dy);
+      float F_pred = F + 
+      //the average
+      float F_avg = (F + F_pred) / 2.0;
+
+      //corrector step
+      float F_update = F_avg - dt * ( (vx * (F_pred_x - F_pred_mx) / 2.0 / dx) + (vy * (F_pred_y - F_pred_my) / 2.0 / dy) )
 
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
