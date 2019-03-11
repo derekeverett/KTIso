@@ -81,11 +81,6 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       F_py = density_p[is_t][iphip];
       F_my = density_p[is_b][iphip];
 
-      //using central differences
-      float dF_dx = (F_px - F_mx) / (2.0 * dx);
-      float dF_dy = (F_py - F_my) / (2.0 * dy);
-
-
       float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
       float vx = cos(phip);
       float vy = sin(phip);
@@ -95,21 +90,34 @@ void propagate(float **density, float **density_p, float *energyDensity, float *
       float delta_F = F - F_iso;
 
       float coll = -delta_F * udotv / tau_iso; //the collision term
+      coll = 0.0;
 
-      //try the NT Scheme ; what are the flux terms ?
-      //float flux_p_x =  vx * ()
-      //density[is][iphip] = F_avg - (dt / dx) * (flux_p_x - flux_m_x) - (dt / dy) * (flux_p_y - flux_m_y)
-
-      //try the MacCormack Method
-      //predictor step (forward differences)
+      /////////////////////////////////////
+      // MacCormack Method
+      //predictor step (forward differences) for gradients
       float F_pred_x = -dt * (vx * (F_px - F) / dx);
       float F_pred_y = -dt * (vy * (F_py - F) / dy);
-      float F_pred = F + 
+
+      float F_pred_mx = -dt * (vx * (F - F_mx) / dx);
+      float F_pred_my = -dt * (vy * (F - F_my) / dy);
+
+      float F_pred = F + F_pred_x + F_pred_y;
       //the average
       float F_avg = (F + F_pred) / 2.0;
 
-      //corrector step
-      float F_update = F_avg - dt * ( (vx * (F_pred_x - F_pred_mx) / 2.0 / dx) + (vy * (F_pred_y - F_pred_my) / 2.0 / dy) )
+      //corrector step for gradients
+      float F_update_x = - dt * (vx * (F_pred_x - F_pred_mx) / 2.0 / dx);
+      float F_update_y = - dt * (vy * (F_pred_y - F_pred_my) / 2.0 / dy);
+      float F_update = F_avg + F_update_x + F_update_y;
+
+      // add the collision term
+      float F_new = F_update + dt * coll;
+      // MacCormack Method
+      /////////////////////////////////////
+
+      //update the value of F(x; phip)
+      density[is][iphip] = F_new;
+
 
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
