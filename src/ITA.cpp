@@ -208,20 +208,19 @@ public:
       writeScalarToFile(energyDensity, (char *)"initial_e", params);
       writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
 
-      //calculate total energy to check convergence
-      float totalEnergy = 0.0;
-      for (int is = 0; is < params.DIM; is++) totalEnergy += energyDensity[is];
-      totalEnergy *= (params.DX * params.DY);
-      printf("Total energy before evolution : %f \n", totalEnergy);
-
       //convert the energy density profile into the density profile F(t, x, y ; phip) to be propagated
       initializeDensity(energyDensity, density_p, params);
       //calculate entries in trig table - time independent in cartesian case
       calculateHypertrigTable(hypertrigTable, params);
 
+      //calculate total energy to check convergence
+      calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
+      float totalEnergy = 0.0;
+      for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
+      totalEnergy *= (params.DX * params.DY);
+      printf("Total energy before evolution : %f \n", totalEnergy);
       //The main time step loop
       printf("Evolving T^munu via ITA Collision Dynamics \n");
-
 
       //FREEZEOUT
       //initialize cornelius for freezeout surface finding
@@ -303,7 +302,7 @@ public:
       calculateShearViscTensor(stressTensor, energyDensity, flowVelocity, pressure, bulkPressure, shearTensor, params);
 
       float totalEnergyAfter = 0.0;
-      for (int is = 0; is < params.DIM; is++) totalEnergyAfter += energyDensity[is];
+      for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
       totalEnergyAfter *= (params.DX * params.DY);
       printf("Total energy after streaming : %f \n", totalEnergyAfter);
 
