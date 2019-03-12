@@ -53,6 +53,7 @@ void initializeGauss(float *density, float b, parameters params) // b is the var
 
 void initializeEllipticalGauss(float *density, float bx, float by, parameters params) // bx is the x variance etc...
 {
+  float regulate = 1.0e-10;
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
@@ -70,7 +71,7 @@ void initializeEllipticalGauss(float *density, float bx, float by, parameters pa
     float x = (float)ix * DX  - ((float)(DIM_X-1)) / 2.0 * DX;
     float y = (float)iy * DY  - ((float)(DIM_Y-1)) / 2.0 * DY;
 
-    density[is] = e0 * exp(-(1.0 / bx) * (x * x)) * exp(-(1.0 / by) * (y * y));
+    density[is] = e0 * exp(-(1.0 / bx) * (x * x)) * exp(-(1.0 / by) * (y * y)) + regulate;
   }
 }
 

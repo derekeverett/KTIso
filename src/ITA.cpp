@@ -257,7 +257,7 @@ public:
       for (int it = 0; it < DIM_T; it++)
       {
         float t = t0 + it * dt;
-        printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
+        if (it % 10 == 0) printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p
         calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
@@ -278,19 +278,12 @@ public:
         }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
-        propagate(density, density_p, energyDensity, flowVelocity, params);
 
-        //swap the density and previous value
-        //std::swap(density, density_p);
+        propagateX(density, density_p, energyDensity, flowVelocity, params); //propogate x direction
+        std::swap(density, density_p); //swap the density and previous value
 
-        //value swap is clumsy
-        for (int is = 0; is < DIM; is++)
-        {
-          for (int iphip = 0; iphip < DIM_PHIP; iphip++)
-          {
-            density_p[is][iphip] = density[is][iphip];
-          }
-        }
+        propagateY(density, density_p, energyDensity, flowVelocity, params); //propogate y direction
+        std::swap(density, density_p); //swap the density and previous value
 
       } // for (int it = 0; it < DIM_T; it++)
 
