@@ -143,14 +143,6 @@ void propagateY(float **density, float **density_p, float *energyDensity, float 
       float vx = cos(phip);
       float vy = sin(phip);
 
-      //collision term
-      float udotv = u0 - ux*vx - uy*vy;
-      float delta_F = F - F_iso;
-      float coll = -delta_F * udotv / tau_iso; //the collision term C[F]
-      //TEMPORARY FOR TESTING
-      coll = 0.0;
-      //TEMPORARY FOR TESTING
-
       /////////////////////////////////////
       // MacCormack Method
       float F_updated = 0.0;
@@ -169,7 +161,12 @@ void propagateY(float **density, float **density_p, float *energyDensity, float 
       // MacCormack Method
       /////////////////////////////////////
 
-      // add the collision term
+      //collision term
+      float udotv = u0 - ux*vx - uy*vy;
+      float delta_F = F - F_iso;
+      float coll = -delta_F * udotv / tau_iso; //the collision term C[F]
+
+      //coll = 0.0; //TEMPORARY FOR TESTING
       F_updated = F_updated + dt * coll;
 
       //update the value of F(x; phip)
