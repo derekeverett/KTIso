@@ -7,7 +7,7 @@
 void calculateBulkInvReynolds(float *pressure, float *bulkPressure, float *R_Pi_Inv, parameters params)
 {
   int DIM = params.DIM;
-  #pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     float p;
@@ -20,7 +20,7 @@ void calculateBulkInvReynolds(float *pressure, float *bulkPressure, float *R_Pi_
 void calculateShearInvReynolds(float *energyDensity, float *pressure, float **shearTensor, float *R_pimunu_Inv, parameters params)
 {
   int DIM = params.DIM;
-  #pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     float num = shearTensor[0][is]*shearTensor[0][is] - 2.0 * (shearTensor[1][is]*shearTensor[1][is] + shearTensor[2][is]*shearTensor[2][is] + shearTensor[3][is]*shearTensor[3][is])

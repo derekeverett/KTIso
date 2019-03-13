@@ -15,7 +15,7 @@ void initializeDensity(float *energyDensity, float **density, parameters params)
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
 
-  //#pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     float val = energyDensity[is] / (2.0 * M_PI);
@@ -33,7 +33,6 @@ void propagateX(float **density, float **density_p, float *energyDensity, float 
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float tau_iso = params.TAU_ISO;
   float dt = params.DT;
   float dx = params.DX;
   float dy = params.DY;
@@ -44,7 +43,7 @@ void propagateX(float **density, float **density_p, float *energyDensity, float 
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
-  //#pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
 
@@ -99,7 +98,8 @@ void propagateY(float **density, float **density_p, float *energyDensity, float 
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float tau_iso = params.TAU_ISO;
+  //float tau_iso = params.TAU_ISO;
+  float alpha = params.ALPHA;
   float dt = params.DT;
   float dx = params.DX;
   float dy = params.DY;
@@ -110,19 +110,14 @@ void propagateY(float **density, float **density_p, float *energyDensity, float 
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
-  //#pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
-    //flow
     float u0 = flowVelocity[0][is];
     float ux = flowVelocity[1][is];
     float uy = flowVelocity[2][is];
 
     float eps = energyDensity[is];
-
-    //the isotropic moment F_iso(x;p)
-    float F_iso = eps / ( u0*u0 + 0.5 * (ux*ux + uy*uy) );
-    F_iso /= (2.0 * M_PI);
 
     int is_r, is_l, is_t, is_b;
     if (is + y_stride < DIM) is_t = is + y_stride;
@@ -162,11 +157,18 @@ void propagateY(float **density, float **density_p, float *energyDensity, float 
       /////////////////////////////////////
 
       //collision term
+      // EoS : \eps = a T^4
+      // tau_iso = \alpha / T
+      //float a = 15.6269; // Nc=3, Nf=3
+      float a = 13.8997; // Nc=3, Nf=2.5
+      float T = powf( (eps/a), 0.25);
+      float tau_iso = alpha / T;
+
       float udotv = u0 - ux*vx - uy*vy;
+      float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
       float delta_F = F - F_iso;
       float coll = -delta_F * udotv / tau_iso; //the collision term C[F]
 
-      //coll = 0.0; //TEMPORARY FOR TESTING
       F_updated = F_updated + dt * coll;
 
       //update the value of F(x; phip)

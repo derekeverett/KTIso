@@ -14,7 +14,7 @@
 void calculateHypertrigTable(float **hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
-  #pragma omp parallel for simd
+  #pragma omp parallel for
   for (int iphip = 0; iphip < DIM_PHIP; iphip++)
   {
     float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
@@ -39,7 +39,7 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
 
   for (int ivar = 0; ivar < 10; ivar++)
   {
-    #pragma omp parallel for simd
+    #pragma omp parallel for
     for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
     {
       float integral = 0.0;
@@ -59,7 +59,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
   float tolerance = 1.0e-5;
   float gamma_max = 100.0;
 
-  //#pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     gsl_matrix *Tmunu; //T^(mu,nu) with two contravariant indices; we need to lower an index
@@ -165,7 +165,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
 void calculateBulkPressure(float **stressTensor, float *energyDensity, float *pressure, float *bulkPressure, parameters params)
 {
   int DIM = params.DIM;
-  //#pragma omp parallel for simd
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     // PI = -1/3 * (T^(mu)_(mu) - epsilon) - p
@@ -177,7 +177,7 @@ void calculateBulkPressure(float **stressTensor, float *energyDensity, float *pr
 void calculateShearViscTensor(float **stressTensor, float *energyDensity, float **flowVelocity, float *pressure, float *bulkPressure, float **shearTensor, parameters params)
 {
   int DIM = params.DIM;
-  //#pragma omp parallel for simd
+  #pragma omp parallel for 
   for (int is = 0; is < DIM; is++)
   {
     // pi^(mu,nu) = T^(mu,nu) - epsilon * u^(mu)u^(nu) + (P + PI) * (g^(mu,nu) - u^(mu)u^(nu))

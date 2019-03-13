@@ -13,8 +13,8 @@ struct parameters
   float T0;
   int EOS_TYPE;
   float E_FREEZE;
-  //float GAMMA;
-  float TAU_ISO;
+  float ALPHA;
+  //float TAU_ISO;
   float THETA;
   //these are computed based on the chosen parameters above; they are constrained
   int DIM;

@@ -148,6 +148,7 @@ public:
       params.T0 = 0.1;
       params.EOS_TYPE = 1;
       params.E_FREEZE = 1.7;
+      params.ALPHA = 10.0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -169,7 +170,7 @@ public:
       printf("T0 = %.2f fm/c\n", params.T0);
       printf("DIM_T = %d \n", params.DIM_T);
       printf("E_FREEZE = %.3f GeV / fm^3 \n", params.E_FREEZE);
-      printf("tau_iso = %.2f \n", params.TAU_ISO);
+      printf("alpha = %.2f \n", params.ALPHA);
 
       if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
       else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
