@@ -11,31 +11,42 @@
 #include "Parameter.h"
 #include <iostream>
 
-void calculateHypertrigTable(float **hypertrigTable, parameters params)
+void calculateHypertrigTable(float ***hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
+  int DIM_VZ = params.DIM_VZ;
+  float dvz = 2.0 / (DIM_VZ);
+
   #pragma omp parallel for
   for (int iphip = 0; iphip < DIM_PHIP; iphip++)
   {
     float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
-    hypertrigTable[0][iphip] = 1.0; //p^t, p^t component
-    hypertrigTable[1][iphip] = cos(phip); //p^t, p^x
-    hypertrigTable[2][iphip] = sin(phip); //p^t, p^y
-    hypertrigTable[3][iphip] = 0.0; //p^t, p^z
-    hypertrigTable[4][iphip] = cos(phip) * cos(phip); //p^x, p^x
-    hypertrigTable[5][iphip] = cos(phip) * sin(phip); //p^x, p^y
-    hypertrigTable[6][iphip] = 0.0; //p^x, p^z
-    hypertrigTable[7][iphip] = sin(phip) * sin(phip); //p^y, p^y
-    hypertrigTable[8][iphip] = 0.0; //p^y, p^z
-    hypertrigTable[9][iphip] = 0.0; //p^z, p^z
+    for (int ivz = 0; ivz < DIM_VZ; ivz++)
+    {
+      float vz = -1.0 + (float)ivz * dvz;
+
+      hypertrigTable[0][iphip][ivz] = 1.0; //p^t, p^t component
+      hypertrigTable[1][iphip][ivz] = cos(phip); //p^t, p^x
+      hypertrigTable[2][iphip][ivz] = sin(phip); //p^t, p^y
+      hypertrigTable[3][iphip][ivz] = vz; //p^t, p^z
+      hypertrigTable[4][iphip][ivz] = cos(phip) * cos(phip); //p^x, p^x
+      hypertrigTable[5][iphip][ivz] = cos(phip) * sin(phip); //p^x, p^y
+      hypertrigTable[6][iphip][ivz] = cos(phip) * vz; //p^x, p^z
+      hypertrigTable[7][iphip][ivz] = sin(phip) * sin(phip); //p^y, p^y
+      hypertrigTable[8][iphip][ivz] = sin(phip) * vz; //p^y, p^z
+      hypertrigTable[9][iphip][ivz] = vz * vz; //p^z, p^z
+    }
+
   }
 }
 
-void calculateStressTensor(float **stressTensor, float **density, float **hypertrigTable, parameters params)
+void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
   float d_phip = (2.0 * M_PI) / float(DIM_PHIP);
+  int DIM_VZ = params.DIM_VZ;
+  float dvz = 2.0 / (DIM_VZ);
 
   for (int ivar = 0; ivar < 10; ivar++)
   {
@@ -45,9 +56,12 @@ void calculateStressTensor(float **stressTensor, float **density, float **hypert
       float integral = 0.0;
       for (int iphip = 0; iphip < DIM_PHIP; iphip++)
       {
-        integral += density[is][iphip] * hypertrigTable[ivar][iphip];
+        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        {
+          integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz];
+        }
       }
-      stressTensor[ivar][is] = integral * d_phip;
+      stressTensor[ivar][is] = integral * (dvz / 2.0) * (d_phip / (2.0 * M_PI) );
     } //for (int is = 0; is < DIM; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
 }
@@ -177,7 +191,7 @@ void calculateBulkPressure(float **stressTensor, float *energyDensity, float *pr
 void calculateShearViscTensor(float **stressTensor, float *energyDensity, float **flowVelocity, float *pressure, float *bulkPressure, float **shearTensor, parameters params)
 {
   int DIM = params.DIM;
-  #pragma omp parallel for 
+  #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
     // pi^(mu,nu) = T^(mu,nu) - epsilon * u^(mu)u^(nu) + (P + PI) * (g^(mu,nu) - u^(mu)u^(nu))

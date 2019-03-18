@@ -179,6 +179,8 @@ void readInParameters(struct parameters &params)
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_PHIP = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.DIM_VZ = dummyInt;
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_T = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.DX = dummyFloat;

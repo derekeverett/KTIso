@@ -165,7 +165,7 @@ public:
       float dy = params.DY;
 
       printf("Parameters are ...\n");
-      printf("(DIM_X, DIM_Y, DIM_PHIP) = (%d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP);
+      printf("(DIM_X, DIM_Y, DIM_PHIP, DIM_VZ) = (%d, %d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP, params.DIM_VZ);
       printf("(DX, DY, DT) = (%.2f fm, %.2f fm, %.2f fm/c)\n", params.DX, params.DY, params.DT);
       printf("T0 = %.2f fm/c\n", params.T0);
       printf("DIM_T = %d \n", params.DIM_T);
@@ -190,16 +190,24 @@ public:
       float **flowVelocity = NULL;
       flowVelocity = calloc2dArrayf(flowVelocity, 4, params.DIM);
       //a table containing 10 rows for 10 independent combinations of p_(mu)p_(nu)
-      float **hypertrigTable = NULL;
-      hypertrigTable = calloc2dArrayf(hypertrigTable, 10, params.DIM_PHIP);
+      float ***hypertrigTable = NULL;
+      hypertrigTable = calloc3dArrayf(hypertrigTable, 10, params.DIM_PHIP, params.DIM_VZ);
 
       //the density F()
-      float **density = NULL;
-      density = calloc2dArrayf(density, params.DIM, params.DIM_PHIP); // function of x,y,eta and rapidity
+      float ***density = NULL;
+      density = calloc3dArrayf(density, params.DIM, params.DIM_PHIP, params.DIM_VZ); // function of x,y,eta and rapidity
 
       //the previous value of the density F()
-      float **density_p = NULL;
-      density_p = calloc2dArrayf(density_p, params.DIM, params.DIM_PHIP);
+      float ***density_p = NULL;
+      density_p = calloc3dArrayf(density_p, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
+      //the integral of  1 / (udotv)^2 / (solid angle); this should be one if energy matching is satisfied numerically
+      float *energyMatchIntegral = NULL;
+      energyMatchIntegral = (float *)calloc(params.DIM, sizeof(float));
+
+      // u^2 must be 1 numerically
+      float *unorm = NULL;
+      unorm = (float *)calloc(params.DIM, sizeof(float));
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -209,7 +217,7 @@ public:
       writeScalarToFile(energyDensity, (char *)"initial_e", params);
       writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
 
-      //convert the energy density profile into the density profile F(t, x, y ; phip) to be propagated
+      //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
       initializeDensity(energyDensity, density_p, params);
       //calculate entries in trig table - time independent in cartesian case
       calculateHypertrigTable(hypertrigTable, params);
@@ -220,6 +228,7 @@ public:
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
       totalEnergy *= (params.DX * params.DY);
       printf("Total energy before evolution : %f \n", totalEnergy);
+
       //The main time step loop
       printf("Evolving T^munu via ITA Collision Dynamics \n");
 
@@ -269,21 +278,57 @@ public:
 
         if (it % write_freq == 0)
         {
+          //check if energy matching condition is satisfied numerically!
+          for (int is = 0; is < params.DIM; is++)
+          {
+            float u0 = flowVelocity[0][is];
+            float ux = flowVelocity[1][is];
+            float uy = flowVelocity[2][is];
+            float usq = u0*u0 - ux*ux - uy*uy;
+
+            float is_it_one = 0.0;
+            for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
+            {
+              float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+              float d_phip = (2.0 * M_PI) / float(DIM_PHIP);
+              float v0 = 1.0;
+	            float vx = cos(phip);
+              float vy = sin(phip);
+              float umuvmu = u0*v0 - (ux*vx + uy*vy);
+	            //try boosting v into LRF
+              //float udotv = ux*vx + uy*vy;
+	            //float v0LRF = u0 * (v0 - (udotv));
+              //float umuvmu = v0LRF;
+              is_it_one += (1.0 / (umuvmu * umuvmu) ) * d_phip;
+            }
+            is_it_one /= (2.0 * M_PI);
+            energyMatchIntegral[is] = is_it_one;
+            unorm[is] = usq;
+          }
+
           char e_file[255] = "";
+          char ux_file[255] = "";
+          char match_file[255] = "";
+          char unorm_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
-          char ut_file[255] = "";
-          sprintf(ut_file, "ut_projection_%.3f", t);
+          sprintf(ux_file, "ux_projection_%.3f", t);
+          sprintf(match_file, "match_projection_%.3f", t);
+          sprintf(unorm_file, "unorm_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
-          writeVectorToFileProjection(flowVelocity, ut_file, 0, params);
+          writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
+          writeScalarToFileProjection(energyMatchIntegral, match_file, params);
+          writeScalarToFileProjection(unorm, unorm_file, params);
         }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
-
         propagateX(density, density_p, energyDensity, flowVelocity, params); //propogate x direction
         std::swap(density, density_p); //swap the density and previous value
-
         propagateY(density, density_p, energyDensity, flowVelocity, params); //propogate y direction
-        std::swap(density, density_p); //swap the density and previous value
+        std::swap(density, density_p);
+        propagateVz(density, density_p, energyDensity, flowVelocity, t, params); //propogate with collision term
+        std::swap(density, density_p);
+        propagateColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
+        std::swap(density, density_p);
 
       } // for (int it = 0; it < DIM_T; it++)
 
@@ -308,13 +353,17 @@ public:
       printf("Total energy after streaming : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'
+      float totalEnergyAfterLRF = 0.0;
+      for (int is = 0; is < params.DIM; is++) totalEnergyAfterLRF += energyDensity[is];
+      totalEnergyAfterLRF *= (params.DX * params.DY);
+
       float totalEnergyInsideHypersurf = 0.0;
       for (int is = 0; is < params.DIM; is++)
       {
         if ( (energyDensity[is] * hbarc) > params.E_FREEZE) totalEnergyInsideHypersurf += energyDensity[is];
       }
       totalEnergyInsideHypersurf *= (params.DX * params.DY);
-      printf("Fraction of energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfter);
+      printf("Fraction of LRF energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfterLRF);
 
       //////////////////////////////////HYDRO VALIDITY//////////////////////////////////
       //bulk inv reynolds #

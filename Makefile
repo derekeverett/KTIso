@@ -7,7 +7,7 @@ CC = icpc
 #compiler flags
 # -g adds debug info
 # -Wall turns on most warnings
-#CFLAGS = -O3 -fopenmp -mcmodel=large -static-libstdc++ #g++  
+#CFLAGS = -O3 #g++  
 CFLAGS = -O3 -qopenmp -mcmodel=large #-static-libstdc++ #icpc 
 #CFLAGS = -acc -ta=tesla:managed #comment or remove -acc if not supported
 LIBS= -lgslcblas -lgsl
