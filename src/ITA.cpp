@@ -154,6 +154,7 @@ public:
       //define some useful combinations
       params.DIM = params.DIM_X * params.DIM_Y;
 
+
       int DIM_X = params.DIM_X;
       int DIM_Y = params.DIM_Y;
       int DIM = params.DIM;
@@ -163,6 +164,8 @@ public:
       float dt = params.DT;
       float dx = params.DX;
       float dy = params.DY;
+      int nt = params.DIM_T;
+      float tf = t0 + (float)nt * dt;
 
       printf("Parameters are ...\n");
       printf("(DIM_X, DIM_Y, DIM_PHIP, DIM_VZ) = (%d, %d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP, params.DIM_VZ);
@@ -223,14 +226,15 @@ public:
       calculateHypertrigTable(hypertrigTable, params);
 
       //calculate total energy to check convergence
-      calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
+      calculateStressTensor(stressTensor, density_p, hypertrigTable, t0, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      totalEnergy *= (params.DX * params.DY);
+      totalEnergy *= (t0 * params.DX * params.DY);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //The main time step loop
-      printf("Evolving T^munu via ITA Collision Dynamics \n");
+      printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
+
 
       //FREEZEOUT
       //initialize cornelius for freezeout surface finding
@@ -268,8 +272,8 @@ public:
         float t = t0 + it * dt;
         if (it % 10 == 0) printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
 
-        //calculate the ten independent components of the stress tensor by integrating over phi_p
-        calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
+        //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
+        calculateStressTensor(stressTensor, density_p, hypertrigTable, t, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
@@ -278,7 +282,9 @@ public:
 
         if (it % write_freq == 0)
         {
+
           //check if energy matching condition is satisfied numerically!
+          /*
           for (int is = 0; is < params.DIM; is++)
           {
             float u0 = flowVelocity[0][is];
@@ -305,17 +311,21 @@ public:
             energyMatchIntegral[is] = is_it_one;
             unorm[is] = usq;
           }
+          */
 
           char e_file[255] = "";
           char ux_file[255] = "";
+	        char un_file[255] = "";
           char match_file[255] = "";
           char unorm_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
+	        sprintf(un_file, "un_projection_%.3f", t);
           sprintf(match_file, "match_projection_%.3f", t);
           sprintf(unorm_file, "unorm_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
+	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
           writeScalarToFileProjection(energyMatchIntegral, match_file, params);
           writeScalarToFileProjection(unorm, unorm_file, params);
         }
@@ -327,8 +337,8 @@ public:
         std::swap(density, density_p);
         propagateVz(density, density_p, energyDensity, flowVelocity, t, params); //propogate with collision term
         std::swap(density, density_p);
-        propagateColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
-        std::swap(density, density_p);
+        //propagateColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
+        //std::swap(density, density_p);
 
       } // for (int it = 0; it < DIM_T; it++)
 
@@ -349,7 +359,7 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      totalEnergyAfter *= (params.DX * params.DY);
+      totalEnergyAfter *= (tf * params.DX * params.DY);
       printf("Total energy after streaming : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'

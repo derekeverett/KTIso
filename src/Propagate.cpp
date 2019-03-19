@@ -9,7 +9,7 @@
 #include <accelmath.h>
 #endif
 
-//this creates the initial F function, a function of spatial coordinates and momentum angles
+//this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz
 void initializeDensity(float *energyDensity, float ***density, parameters params)
 {
   int DIM = params.DIM;
@@ -19,11 +19,11 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
   #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
-    //float val = energyDensity[is] / (2.0 * M_PI);
     float val = energyDensity[is];
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
       //try intializing dependence on v_z by a flat distribution
+      //alternatively try gaussian or delta function ?
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
         density[is][iphip][ivz] = val;
@@ -53,7 +53,6 @@ void propagateX(float ***density, float ***density_p, float *energyDensity, floa
   #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
-
     int is_r, is_l, is_t, is_b;
     if (is + x_stride < DIM) is_r = is + x_stride;
     else is_r = is;
@@ -69,7 +68,6 @@ void propagateX(float ***density, float ***density_p, float *energyDensity, floa
 
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
-
         float F = density_p[is][iphip][ivz];
         float F_px, F_mx, F_py, F_my;
 
@@ -97,7 +95,6 @@ void propagateX(float ***density, float ***density_p, float *energyDensity, floa
         //update the value of F(x; phip)
         density[is][iphip][ivz] = F_updated;
       }
-
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
 
@@ -164,7 +161,6 @@ void propagateY(float ***density, float ***density_p, float *energyDensity, floa
         //update the value of F(x; phip)
         density[is][iphip][ivz] = F_updated;
       }
-
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
 }
@@ -181,7 +177,8 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
   float dx = params.DX;
   float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (DIM_VZ);
+  float dvz = 2.0 / (float)(DIM_VZ);
+  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
@@ -191,7 +188,7 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
     {
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz;
+        float vz = -1.0 + (float)ivz * dvz_2; 
 
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
@@ -227,7 +224,6 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
         //update the value of F(x; phip)
         density[is][iphip][ivz] = F_updated;
       }
-
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
 }
@@ -243,7 +239,7 @@ void propagateColl(float ***density, float ***density_p, float *energyDensity, f
   float dx = params.DX;
   float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (DIM_VZ);
+  //float dvz = 2.0 / (DIM_VZ - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
