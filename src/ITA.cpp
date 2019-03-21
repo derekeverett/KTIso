@@ -154,7 +154,6 @@ public:
       //define some useful combinations
       params.DIM = params.DIM_X * params.DIM_Y;
 
-
       int DIM_X = params.DIM_X;
       int DIM_Y = params.DIM_Y;
       int DIM = params.DIM;
@@ -234,7 +233,6 @@ public:
 
       //The main time step loop
       printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
-
 
       //FREEZEOUT
       //initialize cornelius for freezeout surface finding

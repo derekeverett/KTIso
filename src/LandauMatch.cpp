@@ -49,6 +49,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
   int DIM_VZ = params.DIM_VZ;
   float dvz = 2.0 / (float)(DIM_VZ);
 
+  //Right now just a Riemann Sum over vs and phip
   for (int ivar = 0; ivar < 10; ivar++)
   {
     #pragma omp parallel for
@@ -62,7 +63,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
           integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz];
         }
       }
-      stressTensor[ivar][is] = integral * (dvz / 2.0) * (d_phip / (2.0 * M_PI) ) / t;
+      stressTensor[ivar][is] = integral * (dvz / 2.0) * (d_phip / (2.0 * M_PI) );
     } //for (int is = 0; is < DIM; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
 }

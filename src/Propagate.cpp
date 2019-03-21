@@ -188,7 +188,7 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
     {
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2; 
+        float vz = -1.0 + (float)ivz * dvz_2;
 
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
@@ -205,24 +205,34 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
         float avz = -vz * (1.0 - vz*vz) / tau; //coefficient of partial F / partial v_z
 
         //predictor step (forward differences) for gradients
-        float F_pred_vz = F - dt * (avz * (F_pvz - F) / dvz);
-        float F_pred_mvz = F_mvz - dt * (avz * (F - F_mvz) / dvz);
+        float F_pred_vz = F - dt * (avz * (F_pvz - F) / dvz_2);
+        float F_pred_mvz = F_mvz - dt * (avz * (F - F_mvz) / dvz_2);
         //the average
         float F_avg_vz = (F + F_pred_vz) / 2.0;
         //corrector step for gradients
-        float F_corr_vz = F_avg_vz - dt * (avz * (F_pred_vz - F_pred_mvz) / 2.0 / dvz);
+        float F_corr_vz = F_avg_vz - dt * (avz * (F_pred_vz - F_pred_mvz) / 2.0 / dvz_2);
 
         F_updated = F_corr_vz;
 
         // MacCormack Method
         /////////////////////////////////////
 
-        //add the geometric source term
         float geom_src = (4.0 * vz * vz) * F / tau;
-        F_updated = F_updated + dt * geom_src;
+
+        //add the geometric source term with forward Euler step
+        //F_updated = F_updated + dt * geom_src;
+
+        //add geometric source term with RK2 forward step
+        float k1 = geom_src;
+        //estimate value at t + dt/2
+        float y1 = F_updated + k1 * (dt / 2.0);
+        //estimate slope at t+dt/2
+        float k2 = (y1 - F_updated) / (dt / 2.0);
+        //estimate value at t+dt
+        float y2 = F_updated + k2 * dt;
 
         //update the value of F(x; phip)
-        density[is][iphip][ivz] = F_updated;
+        density[is][iphip][ivz] = y2;
       }
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
   } //for (int is = 0; is < DIM; is++)
@@ -270,17 +280,27 @@ void propagateColl(float ***density, float ***density_p, float *energyDensity, f
       {
         float F = density_p[is][iphip][ivz];
 
-        float F_updated = 0.0;
+        //float F_updated = 0.0;
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
         float delta_F = F - F_iso;
         float coll = -delta_F * udotv / tau_iso; //the collision term C[F]
 
-        F_updated = F + dt * coll;
+        //Forward Euler step is O(dt) accurate, replace with RK2 ?
+        //F_updated = F + dt * coll;
+
+        //Propagate collision term with RK2 forward step
+        float k1 = coll;
+        //estimate value at t + dt/2
+        float y1 = F + k1 * (dt / 2.0);
+        //estimate slope at t+dt/2
+        float k2 = (y1 - F) / (dt / 2.0);
+        //estimate value at t+dt
+        float y2 = F + k2 * dt;
 
         //update the value of F(x; phip)
-        density[is][iphip][ivz] = F_updated;
+        density[is][iphip][ivz] = y2;
       }
 
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
