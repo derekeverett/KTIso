@@ -231,6 +231,10 @@ public:
       totalEnergy *= (t0 * params.DX * params.DY);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
+      //useful for plotting the momentum dependence of distribution function
+      float **F_vz_phip = NULL;
+      F_vz_phip = calloc2dArrayf(F_vz_phip, params.DIM_VZ, params.DIM_PHIP);
+
       //The main time step loop
       printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
 
@@ -268,7 +272,27 @@ public:
       for (int it = 0; it < DIM_T; it++)
       {
         float t = t0 + it * dt;
-        if (it % 10 == 0) printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
+
+        //the index in grid center
+        int icenter = DIM / 2;
+
+        if (it % 10 == 0) printf("Step %d of %d : t = %.3f : energy density in center = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
+
+        //get momentum dependence at center of grid
+
+        std::ofstream myfile;
+        char filename[255] = "";
+        sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
+        myfile.open(filename);
+        for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
+        {
+          for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
+          {
+            myfile << density_p[icenter][iphip][ivz] << " ";
+          }
+          myfile << "\n";
+        }
+        myfile.close();
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
         calculateStressTensor(stressTensor, density_p, hypertrigTable, t, params);

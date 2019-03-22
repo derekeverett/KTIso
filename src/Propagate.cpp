@@ -15,6 +15,7 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
   int DIM_VZ = params.DIM_VZ;
+  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
@@ -26,9 +27,13 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
       //alternatively try gaussian or delta function ?
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
-        density[is][iphip][ivz] = val;
-      }
+        //density[is][iphip][ivz] = val;
 
+        float vz = -1.0 + (float)ivz * dvz_2;
+        density[is][iphip][ivz] = val * exp(-vz * vz / 0.1);
+
+
+      }
     }
   } //for (int is = 0; is < DIM; is++)
 }
