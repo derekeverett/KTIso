@@ -304,55 +304,25 @@ public:
 
         if (it % write_freq == 0)
         {
-
-          //check if energy matching condition is satisfied numerically!
-          /*
-          for (int is = 0; is < params.DIM; is++)
-          {
-            float u0 = flowVelocity[0][is];
-            float ux = flowVelocity[1][is];
-            float uy = flowVelocity[2][is];
-            float usq = u0*u0 - ux*ux - uy*uy;
-
-            float is_it_one = 0.0;
-            for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-            {
-              float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
-              float d_phip = (2.0 * M_PI) / float(DIM_PHIP);
-              float v0 = 1.0;
-	            float vx = cos(phip);
-              float vy = sin(phip);
-              float umuvmu = u0*v0 - (ux*vx + uy*vy);
-	            //try boosting v into LRF
-              //float udotv = ux*vx + uy*vy;
-	            //float v0LRF = u0 * (v0 - (udotv));
-              //float umuvmu = v0LRF;
-              is_it_one += (1.0 / (umuvmu * umuvmu) ) * d_phip;
-            }
-            is_it_one /= (2.0 * M_PI);
-            energyMatchIntegral[is] = is_it_one;
-            unorm[is] = usq;
-          }
-          */
-
           char e_file[255] = "";
           char ux_file[255] = "";
 	        char un_file[255] = "";
-          char match_file[255] = "";
-          char unorm_file[255] = "";
+          //char match_file[255] = "";
+          //char unorm_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
 	        sprintf(un_file, "un_projection_%.3f", t);
-          sprintf(match_file, "match_projection_%.3f", t);
-          sprintf(unorm_file, "unorm_projection_%.3f", t);
+          //sprintf(match_file, "match_projection_%.3f", t);
+          //sprintf(unorm_file, "unorm_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
-          writeScalarToFileProjection(energyMatchIntegral, match_file, params);
-          writeScalarToFileProjection(unorm, unorm_file, params);
+          //writeScalarToFileProjection(energyMatchIntegral, match_file, params);
+          //writeScalarToFileProjection(unorm, unorm_file, params);
         }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
+
         propagateX(density, density_p, energyDensity, flowVelocity, params); //propogate x direction
         std::swap(density, density_p); //swap the density and previous value
         propagateY(density, density_p, energyDensity, flowVelocity, params); //propogate y direction
@@ -361,6 +331,8 @@ public:
         std::swap(density, density_p);
         //propagateColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
         //std::swap(density, density_p);
+        propagateBoundaries(density, density_p, energyDensity, flowVelocity, params);
+        std::swap(density, density_p); //swap the density and previous value
 
       } // for (int it = 0; it < DIM_T; it++)
 

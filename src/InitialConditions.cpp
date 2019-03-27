@@ -328,6 +328,22 @@ void readDensityFile(float *density, char name[255], parameters params)
   */
 }
 
+void initializeHomogeneous(float *density, parameters params) // bx is the x variance etc...
+{
+  int DIM = params.DIM;
+  int DIM_X = params.DIM_X;
+  int DIM_Y = params.DIM_Y;
+  float DX = params.DX;
+  float DY = params.DY;
+
+  float e0 = 500.0; //energy norm factor in fm^(-4) : roughly 500 MeV Temperature
+
+  for (int is = 0; is < DIM; is++)
+  {
+    density[is] = e0;
+  }
+}
+
 int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy_density, parameters params)
 {
   float hbarc = 0.197326938;
@@ -368,6 +384,11 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
     //do a value copy
     //try adding a small value everywhere to regulate problems with flow velocity in dilute regions
     for (int i = 0; i < params.DIM; i++) energyDensity[i] = init_energy_density[i] / (float)hbarc + lower_tolerance;
+  }
+  else if (option == 6)
+  {
+    initializeHomogeneous(energyDensity, params);
+    printf("Initializing energy density uniform in transverse plane \n");
   }
   else
   {
