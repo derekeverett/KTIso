@@ -39,7 +39,7 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
 }
 
 
-void propagateX(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
+void propagateX(float ***density, float ***density_p, parameters params)
 {
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
@@ -105,7 +105,7 @@ void propagateX(float ***density, float ***density_p, float *energyDensity, floa
 
 }
 
-void propagateY(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
+void propagateY(float ***density, float ***density_p, parameters params)
 {
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
@@ -171,7 +171,7 @@ void propagateY(float ***density, float ***density_p, float *energyDensity, floa
 }
 
 
-void propagateVz(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, float tau, parameters params)
+void propagateVz(float ***density, float ***density_p, float tau, parameters params)
 {
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
@@ -207,6 +207,7 @@ void propagateVz(float ***density, float ***density_p, float *energyDensity, flo
         /////////////////////////////////////
         // MacCormack Method
         float F_updated = 0.0;
+        //note this coeff diverges as tau -> 0 !
         float avz = -vz * (1.0 - vz*vz) / tau; //coefficient of partial F / partial v_z
 
         //predictor step (forward differences) for gradients
@@ -313,7 +314,7 @@ void propagateColl(float ***density, float ***density_p, float *energyDensity, f
 }
 
 //sets to zero the density on all edges
-void propagateBoundaries(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
+void propagateBoundaries(float ***density, parameters params)
 {
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
@@ -351,11 +352,11 @@ void propagateBoundaries(float ***density, float ***density_p, float *energyDens
         int is_b = DIM_Y * ix + iy_b;
         int is_t = DIM_Y * ix + iy_t;
 
-        density[isll][iphip][ivz] = density_p[is_b][iphip][ivz];
-        density[isl][iphip][ivz] = density_p[is_b][iphip][ivz];
+        density[isll][iphip][ivz] = density[is_b][iphip][ivz];
+        density[isl][iphip][ivz] = density[is_b][iphip][ivz];
 
-        density[isr][iphip][ivz] = density_p[is_t][iphip][ivz];
-        density[isrr][iphip][ivz] = density_p[is_t][iphip][ivz];
+        density[isr][iphip][ivz] = density[is_t][iphip][ivz];
+        density[isrr][iphip][ivz] = density[is_t][iphip][ivz];
       }
     }
   } //for (int ix = 0; ix < DIM_X; ix++)
@@ -383,11 +384,11 @@ void propagateBoundaries(float ***density, float ***density_p, float *energyDens
         int is_b = DIM_Y * ix_b + iy;
         int is_t = DIM_Y * ix_t + iy;
 
-        density[isll][iphip][ivz] = density_p[is_b][iphip][ivz];
-        density[isl][iphip][ivz] = density_p[is_b][iphip][ivz];
+        density[isll][iphip][ivz] = density[is_b][iphip][ivz];
+        density[isl][iphip][ivz] = density[is_b][iphip][ivz];
 
-        density[isr][iphip][ivz] = density_p[is_t][iphip][ivz];
-        density[isrr][iphip][ivz] = density_p[is_t][iphip][ivz];
+        density[isr][iphip][ivz] = density[is_t][iphip][ivz];
+        density[isrr][iphip][ivz] = density[is_t][iphip][ivz];
       }
     }
   } //for (int iy = 0; iy < DIM_Y; iy++)
@@ -397,10 +398,10 @@ void propagateBoundaries(float ***density, float ***density_p, float *energyDens
   {
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
-      density[is][iphip][0] = 0.0;
-      density[is][iphip][1] = 0.0;
-      density[is][iphip][DIM_VZ - 2] = 0.0;
-      density[is][iphip][DIM_VZ - 1] = 0.0;
+      density[is][iphip][0] = density[is][iphip][2];
+      density[is][iphip][1] = density[is][iphip][2];
+      density[is][iphip][DIM_VZ - 2] = density[is][iphip][DIM_VZ - 3];
+      density[is][iphip][DIM_VZ - 1] = density[is][iphip][DIM_VZ - 3];
     }
   }
 

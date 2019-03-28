@@ -1,5 +1,3 @@
-//This file contains a wrapper class for freestream-milne
-
 #ifndef SRC_ITA_
 #define SRC_ITA_
 
@@ -16,6 +14,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <vector>
+//#include <algorithm>
+#include <array>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -159,6 +159,7 @@ public:
       int DIM = params.DIM;
       int DIM_T = params.DIM_T;
       int DIM_PHIP = params.DIM_PHIP;
+      int DIM_VZ = params.DIM_VZ;
       float t0 = params.T0;
       float dt = params.DT;
       float dx = params.DX;
@@ -225,10 +226,10 @@ public:
       calculateHypertrigTable(hypertrigTable, params);
 
       //calculate total energy to check convergence
-      calculateStressTensor(stressTensor, density_p, hypertrigTable, t0, params);
+      calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      totalEnergy *= (t0 * params.DX * params.DY);
+      totalEnergy *= (params.DX * params.DY);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
@@ -279,7 +280,6 @@ public:
         if (it % 10 == 0) printf("Step %d of %d : t = %.3f : energy density in center = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
 
         //get momentum dependence at center of grid
-
         std::ofstream myfile;
         char filename[255] = "";
         sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
@@ -295,7 +295,7 @@ public:
         myfile.close();
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
-        calculateStressTensor(stressTensor, density_p, hypertrigTable, t, params);
+        calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
@@ -323,16 +323,18 @@ public:
 
         //propagate the density forward by one time step according to ITA EQN of Motion
 
-        propagateX(density, density_p, energyDensity, flowVelocity, params); //propogate x direction
+        propagateX(density, density_p, params); //propogate x direction
+        propagateBoundaries(density, params);
         std::swap(density, density_p); //swap the density and previous value
-        propagateY(density, density_p, energyDensity, flowVelocity, params); //propogate y direction
+	      propagateY(density, density_p, params); //propogate y direction
+        propagateBoundaries(density, params);
         std::swap(density, density_p);
-        propagateVz(density, density_p, energyDensity, flowVelocity, t, params); //propogate with collision term
-        std::swap(density, density_p);
+        //propagateVz(density, density_p, t, params); //propogate with collision term
+        //propagateBoundaries(density, params);
+        //std::swap(density, density_p);
         //propagateColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
         //std::swap(density, density_p);
-        propagateBoundaries(density, density_p, energyDensity, flowVelocity, params);
-        std::swap(density, density_p); //swap the density and previous value
+
 
       } // for (int it = 0; it < DIM_T; it++)
 
@@ -353,8 +355,8 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      totalEnergyAfter *= (tf * params.DX * params.DY);
-      printf("Total energy after streaming : %f \n", totalEnergyAfter);
+      totalEnergyAfter *= (params.DX * params.DY);
+      printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'
       float totalEnergyAfterLRF = 0.0;

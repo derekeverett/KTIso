@@ -41,7 +41,7 @@ void calculateHypertrigTable(float ***hypertrigTable, parameters params)
   }
 }
 
-void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, float t, parameters params)
+void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
@@ -49,7 +49,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
   int DIM_VZ = params.DIM_VZ;
   float dvz = 2.0 / (float)(DIM_VZ);
 
-  //Right now just a Riemann Sum over vs and phip
+  //Right now just a Riemann Sum over phip and trapezoid rule for vz
   for (int ivar = 0; ivar < 10; ivar++)
   {
     #pragma omp parallel for
@@ -60,7 +60,9 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
       {
         for (int ivz = 0; ivz < DIM_VZ; ivz++)
         {
-          integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz];
+          float vz_weight = 1.0;
+          if ( (ivz == 0) || (ivz == DIM_VZ - 1) ) vz_weight = 0.5;
+          integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz] * vz_weight;
         }
       }
       stressTensor[ivar][is] = integral * (dvz / 2.0) * (d_phip / (2.0 * M_PI) );
