@@ -17,10 +17,23 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
   int DIM_VZ = params.DIM_VZ;
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
+  float b = 0.3; //width of distribution in v_z
+  float norm = sqrt(2.0 * M_PI) * b * erf( 1.0 / ( sqrt(2.0) * b) ); //normalization of gaussian on (-1, 1)
+
+  //check that v_z distn is normalized
+  float check_norm = 0.0;
+  for (int ivz = 0; ivz < DIM_VZ; ivz++)
+  {
+    float vz = -1.0 + (float)ivz * dvz_2;
+    check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
+  }
+  std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
+
   #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
   {
-    float val = energyDensity[is];
+    float e0 = energyDensity[is];
+
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
       //try intializing dependence on v_z by a flat distribution
@@ -30,8 +43,8 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
         //density[is][iphip][ivz] = val;
 
         float vz = -1.0 + (float)ivz * dvz_2;
-        density[is][iphip][ivz] = val * exp(-vz * vz / 0.1);
-
+        //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
+        density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
 
       }
     }

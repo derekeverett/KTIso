@@ -65,7 +65,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
           integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz] * vz_weight;
         }
       }
-      stressTensor[ivar][is] = integral * (dvz / 2.0) * (d_phip / (2.0 * M_PI) );
+      stressTensor[ivar][is] = integral * dvz * (d_phip / (2.0 * M_PI) );
     } //for (int is = 0; is < DIM; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
 }
