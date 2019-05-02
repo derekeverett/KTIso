@@ -20,35 +20,48 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
   float b = 0.3; //width of distribution in v_z
   float norm = sqrt(2.0 * M_PI) * b * erf( 1.0 / ( sqrt(2.0) * b) ); //normalization of gaussian on (-1, 1)
 
-  //check that v_z distn is normalized
-  float check_norm = 0.0;
-  for (int ivz = 0; ivz < DIM_VZ; ivz++)
+  if (DIM_VZ > 1)
   {
-    float vz = -1.0 + (float)ivz * dvz_2;
-    check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
-  }
-  std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
-
-  #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
-  {
-    float e0 = energyDensity[is];
-
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    //check that v_z distn is normalized
+    float check_norm = 0.0;
+    for (int ivz = 0; ivz < DIM_VZ; ivz++)
     {
-      //try intializing dependence on v_z by a flat distribution
-      //alternatively try gaussian or delta function ?
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
-      {
-        //density[is][iphip][ivz] = val;
-
-        float vz = -1.0 + (float)ivz * dvz_2;
-        //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
-        density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
-
-      }
+      float vz = -1.0 + (float)ivz * dvz_2;
+      check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
     }
-  } //for (int is = 0; is < DIM; is++)
+    std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
+
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        //try intializing dependence on v_z by a flat distribution
+        //alternatively try gaussian or delta function ?
+        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        {
+          //density[is][iphip][ivz] = val;
+          float vz = -1.0 + (float)ivz * dvz_2;
+          //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
+          density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
+        }
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  } //if (DIM_VZ > 1)
+
+  else
+  {
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        density[is][iphip][0] = e0;
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  }
 }
 
 
@@ -407,16 +420,17 @@ void propagateBoundaries(float ***density, parameters params)
   } //for (int iy = 0; iy < DIM_Y; iy++)
 
   //along boundaries in vz
-  for (int is = 0; is < DIM; is++)
+  if (DIM_VZ > 1)
   {
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int is = 0; is < DIM; is++)
     {
-      density[is][iphip][0] = density[is][iphip][2];
-      density[is][iphip][1] = density[is][iphip][2];
-      density[is][iphip][DIM_VZ - 2] = density[is][iphip][DIM_VZ - 3];
-      density[is][iphip][DIM_VZ - 1] = density[is][iphip][DIM_VZ - 3];
-    }
-  }
-
-
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        density[is][iphip][0] = density[is][iphip][2];
+        density[is][iphip][1] = density[is][iphip][2];
+        density[is][iphip][DIM_VZ - 2] = density[is][iphip][DIM_VZ - 3];
+        density[is][iphip][DIM_VZ - 1] = density[is][iphip][DIM_VZ - 3];
+      }
+    } //if (DIM_VZ > 1)
+  } // if (DIM_VZ > 1)
 }

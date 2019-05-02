@@ -112,6 +112,7 @@ void writeVectorToFileProjection(float **var, char name[255], int idx, parameter
   myfile.close();
 }
 
+
 /*
 void readDensityFile(float *density, char name[255], parameters params)
 {
