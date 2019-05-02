@@ -71,7 +71,7 @@ void initializeEllipticalGauss(float *density, float bx, float by, parameters pa
     float x = (float)ix * DX  - ((float)(DIM_X-1)) / 2.0 * DX;
     float y = (float)iy * DY  - ((float)(DIM_Y-1)) / 2.0 * DY;
 
-    density[is] = e0 * exp(-(1.0 / (2.0 * bx * bx)) * (x * x)) * exp(-(1.0 / (2.0 * by * by)) * (y * y)) + regulate;
+    density[is] = e0 * exp(-(3.0 / (8.0 * bx * bx)) * (x * x)) * exp(-(3.0 / (8.0 * by * by)) * (y * y)) + regulate;
   }
 }
 

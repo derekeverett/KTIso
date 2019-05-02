@@ -295,10 +295,8 @@ public:
         myfile.close();
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
-        //printf("Calculate stress tensor \n");
         calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
         //solve the eigenvalue problem for the energy density and flow velocity
-        //printf("solve eigensystem \n");
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
         //solve for shear stress also
@@ -310,35 +308,27 @@ public:
           char T00_file[255] = "";
           char ux_file[255] = "";
 	        char un_file[255] = "";
-          //char match_file[255] = "";
-          //char unorm_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
           sprintf(T00_file, "T00_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
 	        sprintf(un_file, "un_projection_%.3f", t);
-          //sprintf(match_file, "match_projection_%.3f", t);
-          //sprintf(unorm_file, "unorm_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
           writeVectorToFileProjection(stressTensor, T00_file, 0, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
-          //writeScalarToFileProjection(energyMatchIntegral, match_file, params);
-          //writeScalarToFileProjection(unorm, unorm_file, params);
         }
 
         //propagate the density forward by one time step according to ITA EQN of Motion
-        //printf("propagate x \n");
-        propagateX(density, density_p, params); //propogate x direction
+        propagateX(density, density_p, params); //propagate x direction
         propagateBoundaries(density, params);
         std::swap(density, density_p); //swap the density and previous value
-        //printf("propagate y \n");
-	      propagateY(density, density_p, params); //propogate y direction
+	      propagateY(density, density_p, params); //propagate y direction
         propagateBoundaries(density, params);
         std::swap(density, density_p);
 
         if (DIM_VZ > 1)
         {
-          propagateVz(density, density_p, t, params); //propogate with collision term
+          propagateVz(density, density_p, t, params); // propagate dependence on v_z
           propagateBoundaries(density, params);
           std::swap(density, density_p);
         }
