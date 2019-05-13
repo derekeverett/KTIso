@@ -249,11 +249,9 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
         // MacCormack Method
         /////////////////////////////////////
 
+        //put geometric source term into different kernel?
+        /*
         float geom_src = (4.0 * vz * vz) * F / tau;
-
-        //add the geometric source term with forward Euler step
-        //F_updated = F_updated + dt * geom_src;
-
         //add geometric source term with RK2 forward step
         float k1 = geom_src;
         //estimate value at t + dt/2
@@ -262,6 +260,59 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
         float k2 = (y1 - F_updated) / (dt / 2.0);
         //estimate value at t+dt
         float y2 = F_updated + k2 * dt;
+        //update the value of F(x; phip)
+        density[is][iphip][ivz] = y2;
+        */
+
+        //update the value of F(x; phip)
+        density[is][iphip][ivz] = F_updated;
+
+      }
+    } //for (int iphip; iphip < DIM_PHIP; iphip++)
+  } //for (int is = 0; is < DIM; is++)
+}
+
+//propagate the geometric source term
+void propagateVzGeom(float ***density, float ***density_p, float tau, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_X = params.DIM_X;
+  int DIM_Y = params.DIM_Y;
+  int DIM_PHIP = params.DIM_PHIP;
+  float alpha = params.ALPHA;
+  float dt = params.DT;
+  float dx = params.DX;
+  float dy = params.DY;
+  int DIM_VZ = params.DIM_VZ;
+  float dvz = 2.0 / (float)(DIM_VZ);
+  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+
+  //update the density moment F based on ITA Eqns of Motion
+  #pragma omp parallel for
+  for (int is = 0; is < DIM; is++)
+  {
+    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    {
+      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      {
+        float vz = -1.0 + (float)ivz * dvz_2;
+
+        int ivz_l = ivz - 1;
+        int ivz_r = ivz + 1;
+        if (ivz_l < 0) ivz_l = ivz;
+        if (ivz_r > DIM_VZ - 1) ivz_r = ivz;
+
+        float F = density_p[is][iphip][ivz];
+        float geom_src = -(4.0 * vz * vz) * F / tau;
+
+        //add geometric source term with RK2 forward step
+        float k1 = geom_src;
+        //estimate value at t + dt/2
+        float y1 = F + k1 * (dt / 2.0);
+        //estimate slope at t+dt/2
+        float k2 = (y1 - F) / (dt / 2.0);
+        //estimate value at t+dt
+        float y2 = F + k2 * dt;
 
         //update the value of F(x; phip)
         density[is][iphip][ivz] = y2;

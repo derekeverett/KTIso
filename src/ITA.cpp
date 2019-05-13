@@ -229,7 +229,7 @@ public:
       calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      totalEnergy *= (params.DX * params.DY);
+      totalEnergy *= (params.DX * params.DY * t0);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
@@ -277,7 +277,7 @@ public:
         //the index in grid center
         int icenter = DIM / 2;
 
-        if (it % 10 == 0) printf("Step %d of %d : t = %.3f : energy density in center = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
+        if (it % 1 == 0) printf("Step %d of %d : t = %.3f : energy density in center = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
 
         //get momentum dependence at center of grid
         std::ofstream myfile;
@@ -328,7 +328,10 @@ public:
 
         if (DIM_VZ > 1)
         {
-          propagateVz(density, density_p, t, params); // propagate dependence on v_z
+          propagateVz(density, density_p, t, params); // propagate v_z gradient term
+          propagateBoundaries(density, params);
+          std::swap(density, density_p);
+          propagateVzGeom(density, density_p, t, params); // propagate v_z geometric source term
           propagateBoundaries(density, params);
           std::swap(density, density_p);
         }
@@ -356,7 +359,7 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      totalEnergyAfter *= (params.DX * params.DY);
+      totalEnergyAfter *= (params.DX * params.DY * tf);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'
