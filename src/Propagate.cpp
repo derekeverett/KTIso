@@ -67,18 +67,15 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
 
 void propagateX(float ***density, float ***density_p, parameters params)
 {
-  int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
   float dt = params.DT;
   float dx = params.DX;
-  float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
 
   //using is = DIM_Y * ix + iy
   int x_stride = DIM_Y;
-  int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
@@ -94,15 +91,12 @@ void propagateX(float ***density, float ***density_p, parameters params)
       {
         float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
         float vx = cos(phip);
-        float vy = sin(phip);
 
         for (int ivz = 0; ivz < DIM_VZ; ivz++)
         {
           float F = density_p[is][iphip][ivz];
-          float F_px, F_mx, F_py, F_my;
-
-          F_px = density_p[is_r][iphip][ivz];
-          F_mx = density_p[is_l][iphip][ivz];
+          float F_px = density_p[is_r][iphip][ivz];
+          float F_mx = density_p[is_l][iphip][ivz];
 
           /////////////////////////////////////
           // MacCormack Method
@@ -133,17 +127,14 @@ void propagateX(float ***density, float ***density_p, parameters params)
 
 void propagateY(float ***density, float ***density_p, parameters params)
 {
-  int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
   float dt = params.DT;
-  float dx = params.DX;
   float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
 
   //using is = DIM_Y * ix + iy
-  int x_stride = DIM_Y;
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
@@ -159,16 +150,13 @@ void propagateY(float ***density, float ***density_p, parameters params)
       for (int iphip = 0; iphip < DIM_PHIP; iphip++)
       {
         float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
-        float vx = cos(phip);
         float vy = sin(phip);
 
         for (int ivz = 0; ivz < DIM_VZ; ivz++)
         {
           float F = density_p[is][iphip][ivz];
-          float F_px, F_mx, F_py, F_my;
-
-          F_py = density_p[is_t][iphip][ivz];
-          F_my = density_p[is_b][iphip][ivz];
+          float F_py = density_p[is_t][iphip][ivz];
+          float F_my = density_p[is_b][iphip][ivz];
 
           /////////////////////////////////////
           // MacCormack Method
@@ -200,15 +188,9 @@ void propagateY(float ***density, float ***density_p, parameters params)
 void propagateVz(float ***density, float ***density_p, float tau, parameters params)
 {
   int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float alpha = params.ALPHA;
   float dt = params.DT;
-  float dx = params.DX;
-  float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (float)(DIM_VZ);
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   //update the density moment F based on ITA Eqns of Motion
@@ -234,6 +216,7 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
         // MacCormack Method
         float F_updated = 0.0;
         //note this coeff diverges as tau -> 0 !
+        //this term is zero for v_z = 0, and for v_z = +/- 1
         float avz = -vz * (1.0 - vz*vz) / tau; //coefficient of partial F / partial v_z
 
         //predictor step (forward differences) for gradients
@@ -276,15 +259,9 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
 void propagateVzGeom(float ***density, float ***density_p, float tau, parameters params)
 {
   int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float alpha = params.ALPHA;
   float dt = params.DT;
-  float dx = params.DX;
-  float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (float)(DIM_VZ);
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   //update the density moment F based on ITA Eqns of Motion
@@ -303,6 +280,7 @@ void propagateVzGeom(float ***density, float ***density_p, float tau, parameters
         if (ivz_r > DIM_VZ - 1) ivz_r = ivz;
 
         float F = density_p[is][iphip][ivz];
+        //this term is zero for v_z = 0, and largest for v_z = +/-1
         float geom_src = -(4.0 * vz * vz) * F / tau;
 
         //add geometric source term with RK2 forward step
@@ -324,13 +302,9 @@ void propagateVzGeom(float ***density, float ***density_p, float tau, parameters
 void propagateColl(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
 {
   int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
   float alpha = params.ALPHA;
   float dt = params.DT;
-  float dx = params.DX;
-  float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
   //float dvz = 2.0 / (DIM_VZ - 1);
 
@@ -351,7 +325,7 @@ void propagateColl(float ***density, float ***density_p, float *energyDensity, f
     float T = powf( (eps/a), 0.25);
     float tau_iso = alpha / T;
 
-    if (tau_iso < 10.0 * dt) printf("Warning: tau_iso = %f , energy density = %f , take smaller dt! \n", tau_iso, eps);
+    if (tau_iso < 10.0 * dt) printf("Warning: tau_iso = %f < 10*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
 
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
@@ -397,14 +371,13 @@ void propagateBoundaries(float ***density, parameters params)
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  float dt = params.DT;
-  float dx = params.DX;
-  float dy = params.DY;
+  //float dx = params.DX;
+  //float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
 
   //using is = DIM_Y * ix + iy
-  int x_stride = DIM_Y;
-  int y_stride = 1;
+  //int x_stride = DIM_Y;
+  //int y_stride = 1;
 
   //along boundaries in y
   for (int ix = 0; ix < DIM_X; ix++)

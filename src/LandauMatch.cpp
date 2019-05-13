@@ -15,7 +15,7 @@ void calculateHypertrigTable(float ***hypertrigTable, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (float)(DIM_VZ);
+  //float dvz = 2.0 / (float)(DIM_VZ);
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   #pragma omp parallel for
@@ -90,7 +90,7 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
 {
   int DIM = params.DIM;
 
-  float tolerance = 1.0e-5;
+  //float tolerance = 1.0e-5;
   float gamma_max = 100.0;
 
   #pragma omp parallel for

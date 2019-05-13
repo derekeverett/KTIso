@@ -154,16 +154,16 @@ public:
       //define some useful combinations
       params.DIM = params.DIM_X * params.DIM_Y;
 
-      int DIM_X = params.DIM_X;
-      int DIM_Y = params.DIM_Y;
+      //int DIM_X = params.DIM_X;
+      //int DIM_Y = params.DIM_Y;
       int DIM = params.DIM;
       int DIM_T = params.DIM_T;
-      int DIM_PHIP = params.DIM_PHIP;
+      //int DIM_PHIP = params.DIM_PHIP;
       int DIM_VZ = params.DIM_VZ;
       float t0 = params.T0;
       float dt = params.DT;
-      float dx = params.DX;
-      float dy = params.DY;
+      //float dx = params.DX;
+      //float dy = params.DY;
       int nt = params.DIM_T;
       float tf = t0 + (float)nt * dt;
 
@@ -488,6 +488,7 @@ public:
       free2dArrayf(shearTensor, 10);
 
       printf("Done... Goodbye!\n");
+      return 1;
 
     }
 

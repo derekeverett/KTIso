@@ -179,9 +179,9 @@ void readEnergyDensitySuperMCBlock(float *density, parameters params)
 
 void readEnergyDensityTRENTOBlock(float *density, parameters params)
 {
-  float lower_tolerance = 1.0e-3;
+  //float lower_tolerance = 1.0e-3;
 
-  int DIM = params.DIM;
+  //int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
 
@@ -331,10 +331,6 @@ void readDensityFile(float *density, char name[255], parameters params)
 void initializeHomogeneous(float *density, parameters params) // bx is the x variance etc...
 {
   int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  float DX = params.DX;
-  float DY = params.DY;
 
   float e0 = 500.0; //energy norm factor in fm^(-4) : roughly 500 MeV Temperature
 
@@ -396,4 +392,5 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
     return -1;
   }
 
+  return 1;
 }
