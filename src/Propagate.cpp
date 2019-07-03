@@ -9,8 +9,49 @@
 #include <accelmath.h>
 #endif
 
+/*
+void initializeDVZTable(float **dvz_table, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_PHIP = params.DIM_PHIP;
+  int DIM_VZ = params.DIM_VZ;
+
+  float b = 0.3;
+
+  //initialize so that initial width of gaussian is 10x the spacing
+  for (int is = 0; is < DIM; is++)
+  {
+    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    {
+      dvz_table[is][iphip] = b / 10;
+    }
+  }
+}
+
+void updateDVZTable(float **dvz_table, float ***density, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_PHIP = params.DIM_PHIP;
+  int DIM_VZ = params.DIM_VZ;
+
+  //update table so that the half-width of F(vz) is 10x the spacing
+  for (int is = 0; is < DIM; is++)
+  {
+    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    {
+      //find the value of vz such that F(v_z) / F(0) ~ 2
+      float F_0 =
+
+      dvz_table[is][iphip] = b / 10;
+
+    }
+  }
+}
+
+*/
+
 //this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz
-void initializeDensity(float *energyDensity, float ***density, parameters params)
+void initializeDensity(float *energyDensity, float ***density, float **vz_quad, parameters params)
 {
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
@@ -27,8 +68,15 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
     for (int ivz = 0; ivz < DIM_VZ; ivz++)
     {
       float vz = -1.0 + (float)ivz * dvz_2;
+      //float vz = vz_quad[ivz][0];
+      //float dvz = vz_quad[ivz][1];
       check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
+      //check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz;
+
     }
+
+    //even function, integrated on even domain
+    //check_norm *= 2.0;
     std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
 
     #pragma omp parallel for
@@ -43,6 +91,7 @@ void initializeDensity(float *energyDensity, float ***density, parameters params
         {
           //density[is][iphip][ivz] = val;
           float vz = -1.0 + (float)ivz * dvz_2;
+          //float vz = vz_quad[ivz][0];
           //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
           density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
         }
@@ -185,7 +234,7 @@ void propagateY(float ***density, float ***density_p, parameters params)
 }
 
 
-void propagateVz(float ***density, float ***density_p, float tau, parameters params)
+void propagateVz(float ***density, float ***density_p, float **vz_quad, float tau, parameters params)
 {
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
@@ -202,6 +251,8 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
         float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = vz_quad[ivz][0];
+        //float dvz = vz_quad[ivz][1];
 
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
@@ -221,31 +272,19 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
 
         //predictor step (forward differences) for gradients
         float F_pred_vz = F - dt * (avz * (F_pvz - F) / dvz_2);
+        //float F_pred_vz = F - dt * (avz * (F_pvz - F) / dvz);
         float F_pred_mvz = F_mvz - dt * (avz * (F - F_mvz) / dvz_2);
+        //float F_pred_mvz = F_mvz - dt * (avz * (F - F_mvz) / dvz);
         //the average
         float F_avg_vz = (F + F_pred_vz) / 2.0;
         //corrector step for gradients
         float F_corr_vz = F_avg_vz - dt * (avz * (F_pred_vz - F_pred_mvz) / 2.0 / dvz_2);
+        //float F_corr_vz = F_avg_vz - dt * (avz * (F_pred_vz - F_pred_mvz) / 2.0 / dvz);
 
         F_updated = F_corr_vz;
 
         // MacCormack Method
         /////////////////////////////////////
-
-        //put geometric source term into different kernel?
-        /*
-        float geom_src = (4.0 * vz * vz) * F / tau;
-        //add geometric source term with RK2 forward step
-        float k1 = geom_src;
-        //estimate value at t + dt/2
-        float y1 = F_updated + k1 * (dt / 2.0);
-        //estimate slope at t+dt/2
-        float k2 = (y1 - F_updated) / (dt / 2.0);
-        //estimate value at t+dt
-        float y2 = F_updated + k2 * dt;
-        //update the value of F(x; phip)
-        density[is][iphip][ivz] = y2;
-        */
 
         //update the value of F(x; phip)
         density[is][iphip][ivz] = F_updated;
@@ -256,7 +295,7 @@ void propagateVz(float ***density, float ***density_p, float tau, parameters par
 }
 
 //propagate the geometric source term
-void propagateVzGeom(float ***density, float ***density_p, float tau, parameters params)
+void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, float tau, parameters params)
 {
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
@@ -273,6 +312,7 @@ void propagateVzGeom(float ***density, float ***density_p, float tau, parameters
       for (int ivz = 0; ivz < DIM_VZ; ivz++)
       {
         float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = vz_quad[ivz][0];
 
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
@@ -299,7 +339,7 @@ void propagateVzGeom(float ***density, float ***density_p, float tau, parameters
   } //for (int is = 0; is < DIM; is++)
 }
 
-void propagateColl(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
+void propagateITAColl(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
 {
   int DIM = params.DIM;
   int DIM_PHIP = params.DIM_PHIP;
@@ -318,8 +358,8 @@ void propagateColl(float ***density, float ***density_p, float *energyDensity, f
 
     float eps = energyDensity[is];
 
-    // EoS : \eps = a T^4
-    // tau_iso = \alpha / T
+    // EoS : eps = a T^4
+    // tau_iso = alpha / T
     //float a = 15.6269; // Nc=3, Nf=3
     float a = 13.8997; // Nc=3, Nf=2.5
     float T = powf( (eps/a), 0.25);
@@ -371,13 +411,7 @@ void propagateBoundaries(float ***density, parameters params)
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
   int DIM_PHIP = params.DIM_PHIP;
-  //float dx = params.DX;
-  //float dy = params.DY;
   int DIM_VZ = params.DIM_VZ;
-
-  //using is = DIM_Y * ix + iy
-  //int x_stride = DIM_Y;
-  //int y_stride = 1;
 
   //along boundaries in y
   for (int ix = 0; ix < DIM_X; ix++)
@@ -457,4 +491,51 @@ void propagateBoundaries(float ***density, parameters params)
       }
     } //if (DIM_VZ > 1)
   } // if (DIM_VZ > 1)
+}
+
+void propagateCoordSpace(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
+                float **vz_quad, float t, parameters params)
+{
+  //propagate the density forward by one time step according to ITA EQN of Motion
+  propagateX(density, density_p, params); //propagate x direction
+  propagateBoundaries(density, params);
+  std::swap(density, density_p); //swap the density and previous value
+  propagateY(density, density_p, params); //propagate y direction
+  propagateBoundaries(density, params);
+  std::swap(density, density_p);
+}
+
+void propagateMomentumSpace(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
+  float **vz_quad, float t, parameters params)
+{
+  propagateVz(density, density_p, vz_quad, t, params); // propagate v_z gradient term
+  propagateBoundaries(density, params);
+  std::swap(density, density_p);
+  propagateVzGeom(density, density_p, vz_quad, t, params); // propagate v_z geometric source term
+  propagateBoundaries(density, params);
+  std::swap(density, density_p);
+}
+
+void propagateCollisionTerms(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
+                float **vz_quad, float t, parameters params)
+{
+  propagateITAColl(density, density_p, energyDensity, flowVelocity, params); //propogate with collision term
+  propagateBoundaries(density, params);
+  std::swap(density, density_p);
+}
+
+void propagate(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
+                float **vz_quad, float t, parameters params)
+{
+  int DIM_VZ = params.DIM_VZ;
+  int COLLISIONS = params.COLLISIONS;
+
+  //to propagate forward in time, use Strang operator splitting approach to split advection terms in coord space and momentum space
+  float t_2 = t / 2.0;
+
+  propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
+  if (DIM_VZ > 1) propagateMomentumSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
+  propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
+
+  if (COLLISIONS) propagateCollisionTerms(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
 }

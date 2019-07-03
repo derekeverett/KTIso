@@ -15,6 +15,7 @@ struct parameters
   int EOS_TYPE;
   float E_FREEZE;
   float ALPHA;
+  int COLLISIONS;
   //these are computed based on the chosen parameters above; they are constrained
   int DIM;
   //float TAU;

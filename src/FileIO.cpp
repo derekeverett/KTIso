@@ -197,8 +197,9 @@ void readInParameters(struct parameters &params)
     params.E_FREEZE = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.ALPHA = dummyFloat;
-    //params.TAU_ISO = dummyFloat;
-    fclose(fileIn);
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.COLLISIONS = dummyInt;
 
+    fclose(fileIn);
   }
 }

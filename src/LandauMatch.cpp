@@ -11,11 +11,11 @@
 #include "Parameter.h"
 #include <iostream>
 
-void calculateHypertrigTable(float ***hypertrigTable, parameters params)
+void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM_VZ = params.DIM_VZ;
-  //float dvz = 2.0 / (float)(DIM_VZ);
+  float dvz = 2.0 / (float)(DIM_VZ);
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   #pragma omp parallel for
@@ -25,6 +25,7 @@ void calculateHypertrigTable(float ***hypertrigTable, parameters params)
     for (int ivz = 0; ivz < DIM_VZ; ivz++)
     {
       float vz = -1.0 + (float)ivz * dvz_2;
+      //float vz = vz_quad[ivz][0];
 
       if (DIM_VZ == 1) vz = 0.0;
 
@@ -43,7 +44,7 @@ void calculateHypertrigTable(float ***hypertrigTable, parameters params)
   }
 }
 
-void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, parameters params)
+void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, float **vz_quad, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
@@ -75,12 +76,18 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
         {
           for (int ivz = 0; ivz < DIM_VZ; ivz++)
           {
+            if (density[is][iphip][ivz] < 0.0) printf("Warning : F < 0 \n");
+            
             float vz_weight = 1.0;
+            //float vz_weight = vz_quad[ivz][1];
             if ( (ivz == 0) || (ivz == DIM_VZ - 1) ) vz_weight = 0.5;
             integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz] * vz_weight;
           }
         }
         stressTensor[ivar][is] = integral * dvz * (d_phip / (2.0 * M_PI) );
+        //vz only runs from 0 to 1, integration from -1 to 1 is even, so multiply by 2
+        //stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) * 2.0;
+
       } //else
     } //for (int is = 0; is < DIM; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
