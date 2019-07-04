@@ -277,11 +277,10 @@ public:
       //initializeDVZTable(dvz_table, params);
 
       //calculate total energy to check convergence
-      calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, params);
+      calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t0, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      if (DIM_VZ > 1) totalEnergy *= (params.DX * params.DY * t0);
-      else totalEnergy *= (params.DX * params.DY);
+      totalEnergy *= (params.DX * params.DY * t0);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
@@ -347,7 +346,7 @@ public:
         myfile.close();
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
-        calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, params);
+        calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
@@ -374,8 +373,7 @@ public:
 
         float totalEnergy = 0.0;
         for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-        if (DIM_VZ > 1) totalEnergy *= (params.DX * params.DY * t);
-        else totalEnergy *= (params.DX * params.DY);
+        totalEnergy *= (params.DX * params.DY * t);
         printf("Total energy : %f \n", totalEnergy);
 
       } // for (int it = 0; it < DIM_T; it++)
@@ -397,8 +395,7 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      if (DIM_VZ > 1) totalEnergyAfter *= (params.DX * params.DY * tf);
-      else totalEnergyAfter *= (params.DX * params.DY);
+      totalEnergyAfter *= (params.DX * params.DY * tf);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'

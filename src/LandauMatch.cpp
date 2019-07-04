@@ -44,7 +44,7 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
   }
 }
 
-void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, float **vz_quad, parameters params)
+void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, float **vz_quad, float t, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM = params.DIM;
@@ -59,6 +59,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
     for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
     {
 
+      //case of F ~ delta(v_z), boost invariant
       if (DIM_VZ == 1)
       {
         float integral = 0.0;
@@ -66,7 +67,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
         {
           integral += density[is][iphip][0] * hypertrigTable[ivar][iphip][0];
         } // for (int iphip = 0; iphip < DIM_PHIP; iphip++)
-        stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) );
+        stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) / t; //divide by tau 
       } // if (DIM_VZ == 1)
 
       else
@@ -77,7 +78,7 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
           for (int ivz = 0; ivz < DIM_VZ; ivz++)
           {
             if (density[is][iphip][ivz] < 0.0) printf("Warning : F < 0 \n");
-            
+
             float vz_weight = 1.0;
             //float vz_weight = vz_quad[ivz][1];
             if ( (ivz == 0) || (ivz == DIM_VZ - 1) ) vz_weight = 0.5;
