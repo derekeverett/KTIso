@@ -71,7 +71,7 @@ void initializeEllipticalGauss(float *density, float bx, float by, parameters pa
     float x = (float)ix * DX  - ((float)(DIM_X-1)) / 2.0 * DX;
     float y = (float)iy * DY  - ((float)(DIM_Y-1)) / 2.0 * DY;
 
-    density[is] = e0 * exp(-(1.0 / bx) * (x * x)) * exp(-(1.0 / by) * (y * y)) + regulate;
+    density[is] = e0 * exp(-(3.0 / (8.0 * bx * bx)) * (x * x)) * exp(-(3.0 / (8.0 * by * by)) * (y * y)) + regulate;
   }
 }
 
@@ -179,9 +179,9 @@ void readEnergyDensitySuperMCBlock(float *density, parameters params)
 
 void readEnergyDensityTRENTOBlock(float *density, parameters params)
 {
-  float lower_tolerance = 1.0e-3;
+  //float lower_tolerance = 1.0e-3;
 
-  int DIM = params.DIM;
+  //int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
 
@@ -328,6 +328,18 @@ void readDensityFile(float *density, char name[255], parameters params)
   */
 }
 
+void initializeHomogeneous(float *density, parameters params) // bx is the x variance etc...
+{
+  int DIM = params.DIM;
+
+  float e0 = 500.0; //energy norm factor in fm^(-4) : roughly 500 MeV Temperature
+
+  for (int is = 0; is < DIM; is++)
+  {
+    density[is] = e0;
+  }
+}
+
 int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy_density, parameters params)
 {
   float hbarc = 0.197326938;
@@ -369,10 +381,16 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
     //try adding a small value everywhere to regulate problems with flow velocity in dilute regions
     for (int i = 0; i < params.DIM; i++) energyDensity[i] = init_energy_density[i] / (float)hbarc + lower_tolerance;
   }
+  else if (option == 6)
+  {
+    initializeHomogeneous(energyDensity, params);
+    printf("Initializing energy density uniform in transverse plane \n");
+  }
   else
   {
     printf("Not a valid initial Condition... Goodbye\n");
     return -1;
   }
 
+  return 1;
 }

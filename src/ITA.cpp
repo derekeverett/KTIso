@@ -1,5 +1,3 @@
-//This file contains a wrapper class for freestream-milne
-
 #ifndef SRC_ITA_
 #define SRC_ITA_
 
@@ -16,6 +14,8 @@
 #include <stdio.h>
 #include <time.h>
 #include <vector>
+//#include <algorithm>
+#include <array>
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -149,28 +149,35 @@ public:
       params.EOS_TYPE = 1;
       params.E_FREEZE = 1.7;
       params.ALPHA = 10.0;
+      params.COLLISIONS = 1;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
       params.DIM = params.DIM_X * params.DIM_Y;
-
-      int DIM_X = params.DIM_X;
-      int DIM_Y = params.DIM_Y;
       int DIM = params.DIM;
       int DIM_T = params.DIM_T;
-      int DIM_PHIP = params.DIM_PHIP;
+      int DIM_VZ = params.DIM_VZ;
+      int COLLISIONS = params.COLLISIONS;
+
       float t0 = params.T0;
       float dt = params.DT;
-      float dx = params.DX;
-      float dy = params.DY;
+      int nt = params.DIM_T;
+      float tf = t0 + (float)nt * dt;
 
       printf("Parameters are ...\n");
-      printf("(DIM_X, DIM_Y, DIM_PHIP) = (%d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP);
+      printf("(DIM_X, DIM_Y, DIM_PHIP, DIM_VZ) = (%d, %d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP, params.DIM_VZ);
       printf("(DX, DY, DT) = (%.2f fm, %.2f fm, %.2f fm/c)\n", params.DX, params.DY, params.DT);
       printf("T0 = %.2f fm/c\n", params.T0);
       printf("DIM_T = %d \n", params.DIM_T);
       printf("E_FREEZE = %.3f GeV / fm^3 \n", params.E_FREEZE);
-      printf("alpha = %.2f \n", params.ALPHA);
+
+      if (COLLISIONS)
+      {
+        printf("Evolving with collision term : ");
+        printf("alpha = %.2f \n", params.ALPHA);
+      }
+      else printf("Evolving by freestreaming (no collisions) \n");
+
 
       if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
       else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
@@ -190,16 +197,68 @@ public:
       float **flowVelocity = NULL;
       flowVelocity = calloc2dArrayf(flowVelocity, 4, params.DIM);
       //a table containing 10 rows for 10 independent combinations of p_(mu)p_(nu)
-      float **hypertrigTable = NULL;
-      hypertrigTable = calloc2dArrayf(hypertrigTable, 10, params.DIM_PHIP);
+      float ***hypertrigTable = NULL;
+      hypertrigTable = calloc3dArrayf(hypertrigTable, 10, params.DIM_PHIP, params.DIM_VZ);
+
+      //the table containing roots and weights for quadrature in v_z
+      float **vz_quad = NULL;
+      vz_quad = calloc2dArrayf(vz_quad, params.DIM_VZ, 2);
+
+      //read in table from file
+      /*
+      ifstream vz_quad_file;
+      vz_quad_file.open("ita_tables/GaussHermite20pts.csv");
+      if (vz_quad_file)
+      {
+        float root = 0.0;
+        float weight = 0.0;
+        for (int row = 0; row < params.DIM_VZ; row++)
+        {
+          vz_quad_file >> root >> weight;
+          vz_quad[row][0] = root;
+          vz_quad[row][1] = weight;
+        }
+      }
+      else printf("No quadrature table found!");
+      vz_quad_file.close();
+      */
+
+      //construct table on the fly, using cubic spacing in v_z from 0 to 1
+      //note that the weights stored in this table are for integration over v_z
+      //and should not be used as the differential delta v_z when performing the MacCormack step
+      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      {
+        float dvz_linear = 2.0 / (2*DIM_VZ - 1.0);
+        float vz_linear = 0.0 + (dvz_linear / 2.0) + (ivz * dvz_linear);
+        float vz_cub = pow(vz_linear, 3.0);
+        vz_quad[ivz][0] = vz_cub;
+      }
+
+      for (int ivz = 0; ivz < DIM_VZ - 1; ivz++)
+      {
+        float dvz_cub = vz_quad[ivz+1][0] - vz_quad[ivz][0];
+        vz_quad[ivz][1] = dvz_cub;
+      }
 
       //the density F()
-      float **density = NULL;
-      density = calloc2dArrayf(density, params.DIM, params.DIM_PHIP); // function of x,y,eta and rapidity
+      float ***density = NULL;
+      density = calloc3dArrayf(density, params.DIM, params.DIM_PHIP, params.DIM_VZ); // function of x,y,eta and rapidity
+
+      //the table containing the v_z spacing, for adaptive integration routine
+      //float ***dvz_table = NULL;
+      //dvz_table = calloc3dArrayf(dvz_table, params.DIM, params.DIM_PHIP, params.DIM_VZ);
 
       //the previous value of the density F()
-      float **density_p = NULL;
-      density_p = calloc2dArrayf(density_p, params.DIM, params.DIM_PHIP);
+      float ***density_p = NULL;
+      density_p = calloc3dArrayf(density_p, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
+      //the integral of  1 / (udotv)^2 / (solid angle); this should be one if energy matching is satisfied numerically
+      float *energyMatchIntegral = NULL;
+      energyMatchIntegral = (float *)calloc(params.DIM, sizeof(float));
+
+      // u^2 must be 1 numerically
+      float *unorm = NULL;
+      unorm = (float *)calloc(params.DIM, sizeof(float));
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -209,19 +268,27 @@ public:
       writeScalarToFile(energyDensity, (char *)"initial_e", params);
       writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
 
-      //convert the energy density profile into the density profile F(t, x, y ; phip) to be propagated
-      initializeDensity(energyDensity, density_p, params);
+      //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
+      initializeDensity(energyDensity, density_p, vz_quad, params);
       //calculate entries in trig table - time independent in cartesian case
-      calculateHypertrigTable(hypertrigTable, params);
+      calculateHypertrigTable(hypertrigTable, vz_quad, params);
+
+      //initialize the table of dvz
+      //initializeDVZTable(dvz_table, params);
 
       //calculate total energy to check convergence
-      calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
+      calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t0, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      totalEnergy *= (params.DX * params.DY);
+      totalEnergy *= (params.DX * params.DY * t0);
       printf("Total energy before evolution : %f \n", totalEnergy);
+
+      //useful for plotting the momentum dependence of distribution function
+      float **F_vz_phip = NULL;
+      F_vz_phip = calloc2dArrayf(F_vz_phip, params.DIM_VZ, params.DIM_PHIP);
+
       //The main time step loop
-      printf("Evolving T^munu via ITA Collision Dynamics \n");
+      printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
 
       //FREEZEOUT
       //initialize cornelius for freezeout surface finding
@@ -254,13 +321,32 @@ public:
       int write_freq = 1;
 
       //MAIN TIME STEP LOOP
-      for (int it = 0; it < DIM_T; it++)
+      for (int it = 0; it < DIM_T + 1; it++)
       {
         float t = t0 + it * dt;
-        if (it % 10 == 0) printf("Step %d of %d : t = %.3f \n" , it, DIM_T, t);
 
-        //calculate the ten independent components of the stress tensor by integrating over phi_p
-        calculateStressTensor(stressTensor, density_p, hypertrigTable, params);
+        //the index in grid center
+        int icenter = DIM / 2;
+
+        if (it % 1 == 0) printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
+
+        //get momentum dependence at center of grid
+        std::ofstream myfile;
+        char filename[255] = "";
+        sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
+        myfile.open(filename);
+        for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
+        {
+          for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
+          {
+            myfile << density_p[icenter][iphip][ivz] << " ";
+          }
+          myfile << "\n";
+        }
+        myfile.close();
+
+        //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
+        calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
@@ -270,20 +356,25 @@ public:
         if (it % write_freq == 0)
         {
           char e_file[255] = "";
+          char T00_file[255] = "";
+          char ux_file[255] = "";
+	        char un_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
-          char ut_file[255] = "";
-          sprintf(ut_file, "ut_projection_%.3f", t);
+          sprintf(T00_file, "T00_projection_%.3f", t);
+          sprintf(ux_file, "ux_projection_%.3f", t);
+	        sprintf(un_file, "un_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
-          writeVectorToFileProjection(flowVelocity, ut_file, 0, params);
+          writeVectorToFileProjection(stressTensor, T00_file, 0, params);
+          writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
+	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
         }
 
-        //propagate the density forward by one time step according to ITA EQN of Motion
+        propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
 
-        propagateX(density, density_p, energyDensity, flowVelocity, params); //propogate x direction
-        std::swap(density, density_p); //swap the density and previous value
-
-        propagateY(density, density_p, energyDensity, flowVelocity, params); //propogate y direction
-        std::swap(density, density_p); //swap the density and previous value
+        float totalEnergy = 0.0;
+        for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
+        totalEnergy *= (params.DX * params.DY * t);
+        printf("Total energy : %f \n", totalEnergy);
 
       } // for (int it = 0; it < DIM_T; it++)
 
@@ -304,17 +395,21 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      totalEnergyAfter *= (params.DX * params.DY);
-      printf("Total energy after streaming : %f \n", totalEnergyAfter);
+      totalEnergyAfter *= (params.DX * params.DY * tf);
+      printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'
+      float totalEnergyAfterLRF = 0.0;
+      for (int is = 0; is < params.DIM; is++) totalEnergyAfterLRF += energyDensity[is];
+      totalEnergyAfterLRF *= (params.DX * params.DY);
+
       float totalEnergyInsideHypersurf = 0.0;
       for (int is = 0; is < params.DIM; is++)
       {
         if ( (energyDensity[is] * hbarc) > params.E_FREEZE) totalEnergyInsideHypersurf += energyDensity[is];
       }
       totalEnergyInsideHypersurf *= (params.DX * params.DY);
-      printf("Fraction of energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfter);
+      printf("Fraction of LRF energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfterLRF);
 
       //////////////////////////////////HYDRO VALIDITY//////////////////////////////////
       //bulk inv reynolds #
@@ -429,6 +524,7 @@ public:
       free2dArrayf(shearTensor, 10);
 
       printf("Done... Goodbye!\n");
+      return 1;
 
     }
 

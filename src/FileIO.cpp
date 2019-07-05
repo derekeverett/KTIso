@@ -112,6 +112,7 @@ void writeVectorToFileProjection(float **var, char name[255], int idx, parameter
   myfile.close();
 }
 
+
 /*
 void readDensityFile(float *density, char name[255], parameters params)
 {
@@ -179,6 +180,8 @@ void readInParameters(struct parameters &params)
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_PHIP = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.DIM_VZ = dummyInt;
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_T = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.DX = dummyFloat;
@@ -194,8 +197,9 @@ void readInParameters(struct parameters &params)
     params.E_FREEZE = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.ALPHA = dummyFloat;
-    //params.TAU_ISO = dummyFloat;
-    fclose(fileIn);
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.COLLISIONS = dummyInt;
 
+    fclose(fileIn);
   }
 }
