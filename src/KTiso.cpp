@@ -318,17 +318,24 @@ public:
       //FREEZEOUT
 
       //write to file every write_freq steps
-      int write_freq = 1;
+      int write_freq = 10;
 
       //MAIN TIME STEP LOOP
-      for (int it = 0; it < DIM_T + 1; it++)
+      for (int it = 1; it < DIM_T + 1; it++)
       {
         float t = t0 + it * dt;
 
         //the index in grid center
         int icenter = DIM / 2;
 
-        if (it % 1 == 0) printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3 \n" , it, DIM_T, t, energyDensity[icenter] * hbarc);
+        if (it % write_freq == 0)
+        {
+          float eps = energyDensity[icenter];
+          float T = temperatureFromEnergyDensity(eps);
+          float tau_iso = params.ALPHA / T;
+          printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
+                  it, DIM_T, t, eps * hbarc, T, tau_iso);
+        }
 
         //get momentum dependence at center of grid
         std::ofstream myfile;
@@ -369,12 +376,19 @@ public:
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
         }
 
+        //this propagates ITA eqns of motion terms corresponding to Collisions and freestreaming
         propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
 
-        float totalEnergy = 0.0;
-        for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-        totalEnergy *= (params.DX * params.DY * t);
-        printf("Total energy : %f \n", totalEnergy);
+        //this propagates ITA eqns of motion terms corresponding to physical energy-momentum deposition (Jets)
+        //propagateJetSource(density, density_p, jetSource, energyDensity, flowVelocity, vz_quad, t, params);
+
+        if (it % write_freq == 0)
+        {
+          float totalEnergy = 0.0;
+          for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
+          totalEnergy *= (params.DX * params.DY * t);
+          printf("Total energy : %f \n", totalEnergy);
+        }
 
       } // for (int it = 0; it < DIM_T; it++)
 

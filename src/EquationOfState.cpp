@@ -68,3 +68,16 @@ void calculatePressure(float *energyDensity, float *pressure, parameters params)
     }
   }
 }
+
+//the conformal EoS
+float temperatureFromEnergyDensity(float eps)
+{
+  // EoS : eps = a T^4
+  // tau_iso = alpha / T
+  //float a = 15.6269; // Nc=3, Nf=3
+  float a = 13.8997; // Nc=3, Nf=2.5
+  float T = powf( (eps/a), 0.25);
+
+  return T;
+
+}

@@ -212,41 +212,35 @@ void readEnergyDensityTRENTOBlock(float *density, parameters params)
   superMCFile.close();
 }
 
-void initialize2Gaussians(float *density, float bx, float by, float beta, parameters params) // bx is the x variance etc...
+void initialize2Gaussians(float *density, float bx, float by, parameters params) // bx is the x variance etc...
 {
-  /*
+
   int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
-  int DIM_ETA = params.DIM_ETA;
   float DX = params.DX;
   float DY = params.DY;
-  float DETA = params.DETA;
 
   float e0 = 500.0; //energy norm factor in fm^(-4) : roughly 500 MeV Temperature
 
   for (int is = 0; is < DIM; is++)
   {
-    int ix = is / (DIM_Y * DIM_ETA);
-    int iy = (is - (DIM_Y * DIM_ETA * ix))/ DIM_ETA;
-    int ieta = is - (DIM_Y * DIM_ETA * ix) - (DIM_ETA * iy);
+    int ix = is / (DIM_Y);
+    int iy = is - (DIM_Y * ix);
 
     //does it work for even number of points?
     float x = (float)ix * DX  - ((float)(DIM_X-1)) / 2.0 * DX;
     float y = (float)iy * DY  - ((float)(DIM_Y-1)) / 2.0 * DY;
-    float eta = (float)ieta * DETA  - ((float)(DIM_ETA-1)) / 2.0 * DETA;
 
-    float x1 = 3.0;
+    float x1 = -1.0;
     float y1 = 0.0;
-    float eta1 = 0.0;
 
-    float x2 = -3.0;
+    float x2 = 1.0;
     float y2 = 0.0;
-    float eta2 = 0.0;
-    density[is] = e0 * (exp(-(1.0 / bx) * ((x-x1) * (x-x1))) * exp(-(1.0 / by) * ((y-y1) * (y-y1))) * exp(-(1.0 / beta) * ((eta-eta1) * (eta-eta1)))
-      + exp(-(1.0 / bx) * ((x-x2) * (x-x2))) * exp(-(1.0 / by) * ((y-y2) * (y-y2))) * exp(-(1.0 / beta) * ((eta-eta2) * (eta-eta2))) );
+    density[is] = e0 * (exp(-(1.0 / bx) * ((x-x1) * (x-x1))) * exp(-(1.0 / by) * ((y-y1) * (y-y1)))
+      + exp(-(1.0 / bx) * ((x-x2) * (x-x2))) * exp(-(1.0 / by) * ((y-y2) * (y-y2)))  );
   }
-  */
+
 }
 
 void readEnergyDensityTRENTO3DBlock(float *density, parameters params)
@@ -358,7 +352,7 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   }
   else if (option == 2)
   {
-    initializeEllipticalMCGauss(energyDensity, 3.0, 3.0,params);
+    initializeEllipticalMCGauss(energyDensity, 0.5, 1.0,params);
     printf("Fluctuating Oblate Gaussian \n");
   }
   else if (option == 3)
@@ -385,6 +379,11 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   {
     initializeHomogeneous(energyDensity, params);
     printf("Initializing energy density uniform in transverse plane \n");
+  }
+  else if (option == 7)
+  {
+    initialize2Gaussians(energyDensity, 1.0, 1.0, params);
+    printf("Initializing energy density as two Guassians \n");
   }
   else
   {

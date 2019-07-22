@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include "Parameter.h"
 #include "NTScheme.cpp"
+#include "EquationOfState.cpp"
 #include <iostream>
 
 #ifdef _OPENACC
@@ -348,6 +349,8 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
   int DIM_VZ = params.DIM_VZ;
   //float dvz = 2.0 / (DIM_VZ - 1);
 
+  int warn_flag = 1;
+
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
   for (int is = 0; is < DIM; is++)
@@ -358,15 +361,14 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
 
     float eps = energyDensity[is];
 
-    // EoS : eps = a T^4
-    // tau_iso = alpha / T
-    //float a = 15.6269; // Nc=3, Nf=3
-    float a = 13.8997; // Nc=3, Nf=2.5
-    float T = powf( (eps/a), 0.25);
+    float T = temperatureFromEnergyDensity(eps);
     float tau_iso = alpha / T;
 
-    if (tau_iso < 10.0 * dt) printf("Warning: tau_iso = %f < 10*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
-
+    if ( (tau_iso < 3.0 * dt) && (warn_flag) )
+    {
+      printf("Warning: tau_iso = %f < 3*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
+      warn_flag = 0;
+    }
     for (int iphip = 0; iphip < DIM_PHIP; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
@@ -384,9 +386,7 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
         float delta_F = F - F_iso;
         float coll = -delta_F * udotv / tau_iso; //the collision term C[F]
 
-        //Forward Euler step is O(dt) accurate, replace with RK2 ?
-        //F_updated = F + dt * coll;
-
+        //NOTE THERE IS A PROBLEM, THIS IS NOT RK2 BUT FORWARD EULER METHOD
         //Propagate collision term with RK2 forward step
         float k1 = coll;
         //estimate value at t + dt/2
@@ -398,6 +398,9 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
 
         //update the value of F(x; phip)
         density[is][iphip][ivz] = y2;
+
+        //if (iphip == 0 && is == (DIM - 1) / 2) std::cout << "k2 * dt = " << k2 * dt << std::endl;
+
       }
 
     } //for (int iphip; iphip < DIM_PHIP; iphip++)
@@ -533,9 +536,21 @@ void propagate(float ***density, float ***density_p, float *energyDensity, float
   //to propagate forward in time, use Strang operator splitting approach to split advection terms in coord space and momentum space
   float t_2 = t / 2.0;
 
-  propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
-  if (DIM_VZ > 1) propagateMomentumSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
-  propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
+  if (DIM_VZ > 1)
+  {
+    propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
+    propagateMomentumSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
+    propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t_2, params);
+  }
+  else propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
 
   if (COLLISIONS) propagateCollisionTerms(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
 }
+
+/*
+void propagateJetSource(float ***density, float ***density_p, float ***jetSource, float *energyDensity, float **flowVelocity,
+                float **vz_quad, float t, parameters params)
+{
+
+}
+*/

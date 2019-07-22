@@ -5,4 +5,7 @@ mkdir output
 
 cp ita_input output/ita_input
 
-make
+cd build
+make clean
+make install
+cd ..
