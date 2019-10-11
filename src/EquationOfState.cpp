@@ -76,6 +76,11 @@ float temperatureFromEnergyDensity(float eps)
   // tau_iso = alpha / T
   //float a = 15.6269; // Nc=3, Nf=3
   float a = 13.8997; // Nc=3, Nf=2.5
+
+  //TEMPORARY
+  //a = 1.0;
+  //TEMPORARY
+
   float T = powf( (eps/a), 0.25);
 
   return T;

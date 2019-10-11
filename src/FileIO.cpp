@@ -174,6 +174,8 @@ void readInParameters(struct parameters &params)
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.IC_ENERGY = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.IC_FLOW = dummyInt;
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_X = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.DIM_Y = dummyInt;

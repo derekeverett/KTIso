@@ -2,6 +2,7 @@
 #define SRC_ITA_
 
 #include "Propagate.cpp"
+#include "CollisionKernels.cpp"
 #include "InitialConditions.cpp"
 #include "LandauMatch.cpp"
 #include "EquationOfState.cpp"
@@ -252,6 +253,19 @@ public:
       float ***density_p = NULL;
       density_p = calloc3dArrayf(density_p, params.DIM, params.DIM_PHIP, params.DIM_VZ);
 
+      //the intermediate value of F() for RK2
+      float ***density_i = NULL;
+      density_i = calloc3dArrayf(density_i, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
+      float ***density_i2 = NULL;
+      density_i2 = calloc3dArrayf(density_i2, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
+      float ***density_i3 = NULL;
+      density_i3 = calloc3dArrayf(density_i3, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
+      float ***density_i4 = NULL;
+      density_i4 = calloc3dArrayf(density_i4, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+
       //the integral of  1 / (udotv)^2 / (solid angle); this should be one if energy matching is satisfied numerically
       float *energyMatchIntegral = NULL;
       energyMatchIntegral = (float *)calloc(params.DIM, sizeof(float));
@@ -259,6 +273,10 @@ public:
       // u^2 must be 1 numerically
       float *unorm = NULL;
       unorm = (float *)calloc(params.DIM, sizeof(float));
+
+      //the isotropic (IN LRF!) distribution F_iso
+      //float ***F_iso = NULL;
+      //F_iso = calloc3dArrayf(F_iso, params.DIM, params.DIM_PHIP, params.DIM_VZ);
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -269,7 +287,15 @@ public:
       writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
 
       //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
+      //isotropic initialization in phi_p
       initializeDensity(energyDensity, density_p, vz_quad, params);
+
+      //TEMPORARY
+      //anisotropic (in phi_p) initialization of F
+      //std::cout << "Initializing F with anisotropic dist in phi_p "<< "\n";
+      //initializeDensityAniso(energyDensity, density_p, vz_quad, params);
+      //TEMPORARY
+
       //calculate entries in trig table - time independent in cartesian case
       calculateHypertrigTable(hypertrigTable, vz_quad, params);
 
@@ -280,7 +306,8 @@ public:
       calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t0, params);
       float totalEnergy = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      totalEnergy *= (params.DX * params.DY * t0);
+      //totalEnergy *= (params.DX * params.DY * t0);
+      totalEnergy *= (params.DX * params.DY);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
@@ -318,24 +345,88 @@ public:
       //FREEZEOUT
 
       //write to file every write_freq steps
-      int write_freq = 10;
+      int write_freq = 1;
+
+      //the index in grid center
+      int icenter = DIM / 2;
+
+      float total_work = 0.0; //total work done by longitudinal pressure
 
       //MAIN TIME STEP LOOP
       for (int it = 1; it < DIM_T + 1; it++)
       {
         float t = t0 + it * dt;
 
-        //the index in grid center
-        int icenter = DIM / 2;
+        //calculate the amount of work done by longitudinal pressure
+        float work = calculateLongitudinalWork(stressTensor, t-dt, dt, params);
+        total_work += work;
 
-        if (it % write_freq == 0)
+        //this propagates ITA eqns of motion terms corresponding to Collisions and freestreaming
+        propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
+
+        if (params.COLLISIONS)
         {
-          float eps = energyDensity[icenter];
-          float T = temperatureFromEnergyDensity(eps);
-          float tau_iso = params.ALPHA / T;
-          printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
-                  it, DIM_T, t, eps * hbarc, T, tau_iso);
-        }
+          //first find the current energy density and flow after advection updates
+          calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
+          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+
+          //find the isotropic distribution F_iso satisfying total energy conservation
+          //calculateF_iso(F_iso, density_p, flowVelocity);
+
+          //RK METHODS
+
+          //RK2
+          //guess step to estimate the collision term at C[F(t + dt/2)]
+          //propagateITAColl(density_i, density_p, energyDensity, flowVelocity, dt / 2.0, params);
+          //propagateBoundaries(density_i, params);
+          //now propagate using the estimated C[F(t + dt/2)]
+          //propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
+          //propagateBoundaries(density, params);
+
+          //RK4
+          /*
+          propagateITAColl(density_i2, density_p, energyDensity, flowVelocity, dt / 2.0, params);
+          propagateBoundaries(density_i2, params);
+
+          propagateITACollConvexComb(density_i3, density_i2, density_p, energyDensity, flowVelocity, dt / 2.0, params);
+          propagateBoundaries(density_i3, params);
+
+          propagateITACollConvexComb(density_i4, density_i3, density_p, energyDensity, flowVelocity, dt / 2.0, params);
+          propagateBoundaries(density_i4, params);
+
+          propagateITACollRK4(density, density_i4, density_i3, density_i2, density_p, energyDensity, flowVelocity, dt, params);
+          propagateBoundaries(density, params);
+          */
+
+          //RELAXATION TYPE METHODS
+          //propagateRelaxMethodColl(density, density_p, energyDensity, dt, params);
+          //propagateRelaxMethodCollLRF(density, density_p, energyDensity, flowVelocity, dt, params);
+          //propagateRelaxMethodColl2(density, density_p, energyDensity, flowVelocity, dt, params);
+
+          //METHODS USING EXACT SOLUTION of d/dt F = nu (F_iso - F)
+          //try a guess-corrector method
+          //propagate F forward by dt/2
+          //propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt / 2.0, params);
+          // find epsilon and u^mu at t + dt/2
+          //calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t + dt/2.0, params);
+          //solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+          //use guess of epsilon and u at t + dt/2 to propagate F to t+dt
+          propagateITACollExact(density, density_p, energyDensity, flowVelocity, dt, params);
+
+          propagateBoundaries(density, params);
+
+          updateDensity(density, density_p, params);
+
+        } // if (params.COLLISIONS)
+
+
+        //this propagates ITA eqns of motion terms corresponding to physical energy-momentum deposition (Jets)
+        //propagateJetSource(density, density_p, jetSource, energyDensity, flowVelocity, vz_quad, t, params);
+
+        //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
+        calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
+        //solve the eigenvalue problem for the energy density and flow velocity
+        solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
         //get momentum dependence at center of grid
         std::ofstream myfile;
@@ -352,16 +443,27 @@ public:
         }
         myfile.close();
 
-        //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
-        calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
-        //solve the eigenvalue problem for the energy density and flow velocity
-        solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-
         //solve for shear stress also
         //then use CORNELIUS to construct a freezeout surface
 
         if (it % write_freq == 0)
         {
+          float eps = energyDensity[icenter];
+          float T = temperatureFromEnergyDensity(eps);
+          float tau_iso = params.ALPHA / T;
+          printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
+                  it, DIM_T, t, eps * hbarc, T, tau_iso);
+
+          float totalEnergy = 0.0;
+          for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
+          //totalEnergy *= (params.DX * params.DY * t);
+          totalEnergy *= (params.DX * params.DY);
+
+          //total energy left at midrapidity considering longitudinal work
+          float totalEnergyMid = totalEnergy + total_work;
+          printf("Total work done by long. pressure : %f \n", total_work);
+          printf("Total energy left at midrap + total long. work : %f \n", totalEnergy);
+
           char e_file[255] = "";
           char T00_file[255] = "";
           char ux_file[255] = "";
@@ -374,20 +476,6 @@ public:
           writeVectorToFileProjection(stressTensor, T00_file, 0, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
-        }
-
-        //this propagates ITA eqns of motion terms corresponding to Collisions and freestreaming
-        propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, params);
-
-        //this propagates ITA eqns of motion terms corresponding to physical energy-momentum deposition (Jets)
-        //propagateJetSource(density, density_p, jetSource, energyDensity, flowVelocity, vz_quad, t, params);
-
-        if (it % write_freq == 0)
-        {
-          float totalEnergy = 0.0;
-          for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-          totalEnergy *= (params.DX * params.DY * t);
-          printf("Total energy : %f \n", totalEnergy);
         }
 
       } // for (int it = 0; it < DIM_T; it++)
@@ -409,7 +497,8 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      totalEnergyAfter *= (params.DX * params.DY * tf);
+      //totalEnergyAfter *= (params.DX * params.DY * tf);
+      totalEnergyAfter *= (params.DX * params.DY);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'

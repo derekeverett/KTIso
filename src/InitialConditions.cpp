@@ -7,6 +7,138 @@
 #include "Parameter.h"
 #define THETA_FUNCTION(X) ((float)X < (float)0 ? (float)0 : (float)1)
 
+//this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz
+//this function assumes F is initially isotropic in phi_p
+void initializeDensity(float *energyDensity, float ***density, float **vz_quad, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_PHIP = params.DIM_PHIP;
+  int DIM_VZ = params.DIM_VZ;
+  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+
+  float b = 0.3; //width of distribution in v_z
+  float norm = sqrt(2.0 * M_PI) * b * erf( 1.0 / ( sqrt(2.0) * b) ); //normalization of gaussian on (-1, 1)
+
+  if (DIM_VZ > 1)
+  {
+    //check that v_z distn is normalized
+    float check_norm = 0.0;
+    for (int ivz = 0; ivz < DIM_VZ; ivz++)
+    {
+      float vz = -1.0 + (float)ivz * dvz_2;
+      //float vz = vz_quad[ivz][0];
+      //float dvz = vz_quad[ivz][1];
+      check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
+      //check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz;
+
+    }
+
+    //even function, integrated on even domain
+    //check_norm *= 2.0;
+    std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
+
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        //try intializing dependence on v_z by a flat distribution
+        //alternatively try gaussian or delta function ?
+        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        {
+          //density[is][iphip][ivz] = val;
+          float vz = -1.0 + (float)ivz * dvz_2;
+          //float vz = vz_quad[ivz][0];
+          //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
+          density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
+        }
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  } //if (DIM_VZ > 1)
+
+  else
+  {
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        //density[is][iphip][0] = e0;
+        density[is][iphip][0] = 2.0 * e0;
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  }
+}
+
+//this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz
+// assumes F is initially an anisotropic function of phi_p
+void initializeDensityAniso(float *energyDensity, float ***density, float **vz_quad, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_PHIP = params.DIM_PHIP;
+  int DIM_VZ = params.DIM_VZ;
+  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+
+  float b = 0.3; //width of distribution in v_z
+  float norm = sqrt(2.0 * M_PI) * b * erf( 1.0 / ( sqrt(2.0) * b) ); //normalization of gaussian on (-1, 1)
+
+  if (DIM_VZ > 1)
+  {
+    //check that v_z distn is normalized
+    float check_norm = 0.0;
+    for (int ivz = 0; ivz < DIM_VZ; ivz++)
+    {
+      float vz = -1.0 + (float)ivz * dvz_2;
+      //float vz = vz_quad[ivz][0];
+      //float dvz = vz_quad[ivz][1];
+      check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz_2;
+      //check_norm += exp(-vz * vz / (2.0 * b * b)) / norm * dvz;
+
+    }
+
+    //even function, integrated on even domain
+    //check_norm *= 2.0;
+    std::cout << "Checking norm of v_z distribution : norm = " << check_norm << std::endl;
+
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        //try intializing dependence on v_z by a flat distribution
+        //alternatively try gaussian or delta function ?
+        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        {
+          //density[is][iphip][ivz] = val;
+          float vz = -1.0 + (float)ivz * dvz_2;
+          //float vz = vz_quad[ivz][0];
+          //density[is][iphip][ivz] = e0 * exp(-vz * vz / 0.1); //this distribution is not normalized
+          density[is][iphip][ivz] = e0 * exp(-vz * vz / (2.0 * b * b)) / norm;
+        }
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  } //if (DIM_VZ > 1)
+
+  else
+  {
+    #pragma omp parallel for
+    for (int is = 0; is < DIM; is++)
+    {
+      float e0 = energyDensity[is];
+      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      {
+        float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+
+        //density[is][iphip][0] = e0;
+        density[is][iphip][0] = 4.0 * e0 * cos(phip) * cos(phip);
+      } //for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    } //for (int is = 0; is < DIM; is++)
+  }
+}
+
 void initializeZero(float *density, parameters params)
 {
   int DIM = params.DIM;
@@ -16,7 +148,7 @@ void initializeZero(float *density, parameters params)
   }
 }
 
-void initializeFlow(float **flowVelocity, parameters params)
+void initializeFlowZero(float **flowVelocity, parameters params)
 {
   int DIM = params.DIM;
   for (int is = 0; is < DIM; is++)
@@ -27,6 +159,67 @@ void initializeFlow(float **flowVelocity, parameters params)
     flowVelocity[3][is] = 0.0;
   }
 }
+
+void readFlowVelocityBlock(float **flowVelocity, parameters params)
+{
+  int DIM_X = params.DIM_X;
+  int DIM_Y = params.DIM_Y;
+  int DIM = params.DIM;
+
+  //first read in the transverse flow profile
+  float temp = 0.0;
+  std::ifstream blockFile;
+  blockFile.open("initial_profiles/ux.dat");
+  if (blockFile.is_open())
+  {
+    for (int iy = 0; iy < DIM_Y; iy++)
+    {
+      for (int ix = 0; ix < DIM_X; ix++)
+      {
+        blockFile >> temp;
+        int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y
+        flowVelocity[1][is] = temp;
+      }
+    }
+  }
+
+  else
+  {
+    printf("Could not find initial profile in initial_profiles!");
+  }
+  blockFile.close();
+
+  blockFile.open("initial_profiles/uy.dat");
+  if (blockFile.is_open())
+  {
+    for (int iy = 0; iy < DIM_Y; iy++)
+    {
+      for (int ix = 0; ix < DIM_X; ix++)
+      {
+        blockFile >> temp;
+        int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y
+        flowVelocity[2][is] = temp;
+      }
+    }
+  }
+
+  else
+  {
+    printf("Could not find initial profile in initial_profiles!");
+  }
+  blockFile.close();
+
+  //now set u^eta to zero for boost invariance and u^t = 1 - (u^x*u^x + u^y*u^y)
+  for (int is = 0; is < DIM; is++)
+  {
+    float ux = flowVelocity[1][is];
+    float uy = flowVelocity[2][is];
+    flowVelocity[0][is] = 1.0 - (ux*ux + uy*uy);
+    flowVelocity[3][is] = 0.0;
+  }
+
+}
+
 
 void initializeGauss(float *density, float b, parameters params) // b is the variance ('spherically' symmetric)
 {
@@ -177,29 +370,24 @@ void readEnergyDensitySuperMCBlock(float *density, parameters params)
   */
 }
 
-void readEnergyDensityTRENTOBlock(float *density, parameters params)
+void readEnergyDensityBlock(float *density, parameters params)
 {
   //float lower_tolerance = 1.0e-3;
-
-  //int DIM = params.DIM;
   int DIM_X = params.DIM_X;
   int DIM_Y = params.DIM_Y;
 
-  //first read in the transverse profile from superMC block data format
+  //first read in the transverse profile
   float temp = 0.0;
-  std::ifstream superMCFile;
-  superMCFile.open("initial_profiles/e.dat");
-  if (superMCFile.is_open())
+  std::ifstream blockFile;
+  blockFile.open("initial_profiles/e.dat");
+  if (blockFile.is_open())
   {
-    //skip the eight line (l) header
-    std::string line;
-    for (int l = 0; l < 12; l++) getline(superMCFile, line);
     for (int iy = 0; iy < DIM_Y; iy++)
     {
       for (int ix = 0; ix < DIM_X; ix++)
       {
-        superMCFile >> temp;
-        int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y, z
+        blockFile >> temp;
+        int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y
         density[is] = temp;
       }
     }
@@ -209,7 +397,7 @@ void readEnergyDensityTRENTOBlock(float *density, parameters params)
   {
     printf("Could not find initial profile in initial_profiles!");
   }
-  superMCFile.close();
+  blockFile.close();
 }
 
 void initialize2Gaussians(float *density, float bx, float by, parameters params) // bx is the x variance etc...
@@ -384,6 +572,35 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   {
     initialize2Gaussians(energyDensity, 1.0, 1.0, params);
     printf("Initializing energy density as two Guassians \n");
+  }
+  else if (option == 8)
+  {
+
+    printf("Initializing energy and flow velocity to match Isotropic Gubser \n");
+  }
+  else
+  {
+    printf("Not a valid initial Condition... Goodbye\n");
+    return -1;
+  }
+
+  return 1;
+}
+
+int initializeFlow(float **flowVelocity, parameters params)
+{
+  int option = params.IC_FLOW;
+
+  printf("setting initial conditions on flow velocity : ");
+  if (option == 1)
+  {
+    initializeFlowZero(flowVelocity, params);
+    printf("zero \n");
+  }
+  else if (option == 2)
+  {
+    readFlowVelocityBlock(flowVelocity, params);
+    printf("reading from initial_profiles \n");
   }
   else
   {

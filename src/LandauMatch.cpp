@@ -11,11 +11,12 @@
 #include "Parameter.h"
 #include <iostream>
 
+//this constructs the tensor v^mu v^nu
 void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameters params)
 {
   int DIM_PHIP = params.DIM_PHIP;
   int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (float)(DIM_VZ);
+  //float dvz = 2.0 / (float)(DIM_VZ);
   float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
 
   #pragma omp parallel for
@@ -67,7 +68,8 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
         {
           integral += density[is][iphip][0] * hypertrigTable[ivar][iphip][0];
         } // for (int iphip = 0; iphip < DIM_PHIP; iphip++)
-        stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) / t; //divide by tau 
+        //stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) / t; //should we divide by tau???
+        stressTensor[ivar][is] = integral * (d_phip / (4.0 * M_PI) );
       } // if (DIM_VZ == 1)
 
       else
@@ -237,4 +239,77 @@ void calculateShearViscTensor(float **stressTensor, float *energyDensity, float 
     shearTensor[8][is] = stressTensor[8][is] - flowVelocity[2][is] * flowVelocity[3][is] * b; //pi^(y,z)
     shearTensor[9][is] = stressTensor[9][is] - flowVelocity[3][is] * flowVelocity[3][is] * b - c ; //pi^(z,z)
   }
+}
+
+/*
+calculateF_iso(float ***F_iso, float ***density, float *energyDensity, float **flowVelocity, parameters params)
+{
+  int DIM = params.DIM;
+  int DIM_PHIP = params.DIM_PHIP;
+  float alpha = params.ALPHA;
+  int DIM_VZ = params.DIM_VZ;
+  //float dvz = 2.0 / (DIM_VZ - 1);
+
+  int warn_flag = 1;
+
+  //update the density moment F based on ITA Eqns of Motion
+  #pragma omp parallel for
+  for (int is = 0; is < DIM; is++)
+  {
+    float u0 = flowVelocity[0][is];
+    float ux = flowVelocity[1][is];
+    float uy = flowVelocity[2][is];
+
+    float eps = energyDensity[is];
+
+    float T = temperatureFromEnergyDensity(eps);
+    float tau_iso = alpha / T;
+
+    if ( (tau_iso < 3.0 * dt) && (warn_flag) )
+    {
+      printf("Warning: tau_iso = %f < 3*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
+      warn_flag = 0;
+    }
+    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    {
+      float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+      float vx = cos(phip);
+      float vy = sin(phip);
+
+      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      {
+        float F = density[is][iphip][ivz];
+
+        //collision term
+        float udotv = u0 - ux*vx - uy*vy;
+        float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+
+        //if (iphip == 0 && is == (DIM - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < DIM_VZ; ivz++)
+    } //for (int iphip; iphip < DIM_PHIP; iphip++)
+  } //for (int is = 0; is < DIM; is++)
+
+}
+*/
+
+float calculateLongitudinalWork(float **stressTensor, float t, float dt, parameters params)
+{
+  int DIM = params.DIM;
+  float dx = params.DX;
+  float dy = params.DY;
+
+  float work = 0.0;
+  for (int is = 0; is < DIM; is++)
+  {
+    float T_zz = stressTensor[9][is];
+    work += T_zz;
+  }
+
+  //what is the right factor? we are propagating stress tensor cartesian components right?
+  //float factor = t*t*dt*dx*dy;
+  float factor = dt*dx*dy;
+  work *= factor;
+
+  return work;
+
 }

@@ -3,6 +3,7 @@ struct parameters
 {
   int OUTPUTFORMAT;
   int IC_ENERGY;
+  int IC_FLOW;
   int DIM_X;
   int DIM_Y;
   int DIM_PHIP;
