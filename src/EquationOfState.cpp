@@ -3,20 +3,20 @@
 #include <math.h>
 void calculatePressure(float *energyDensity, float *pressure, parameters params)
 {
-  int EOS_TYPE = params.EOS_TYPE;
-  int DIM = params.DIM;
+  int eos_type = params.eos_type;
+  int ntot = params.ntot;
   //conformal eqn of state
-  if (EOS_TYPE == 1)
+  if (eos_type == 1)
   {
     #pragma omp parallel for
-    for (int is = 0; is < DIM; is++)
+    for (int is = 0; is < ntot; is++)
     {
       pressure[is] = energyDensity[is] / 3.0;
     }
   }
   //parameterization from Wuppertal-Budapest collaboration, taken from cpu-vh/.../EquationOfState.cpp
   //requires zero baryon density
-  else if (EOS_TYPE == 2)
+  else if (eos_type == 2)
   {
     float a0 = -0.25181736420168666;
     float a1 = 9737.845799644809;
@@ -47,7 +47,7 @@ void calculatePressure(float *energyDensity, float *pressure, parameters params)
     float b12 = 3.2581066229887368e-18;
 
     #pragma omp parallel for
-    for (int is = 0; is < DIM; is++)
+    for (int is = 0; is < ntot; is++)
     {
       float e = energyDensity[is];
       float e1 = e;
@@ -73,7 +73,7 @@ void calculatePressure(float *energyDensity, float *pressure, parameters params)
 float temperatureFromEnergyDensity(float eps)
 {
   // EoS : eps = a T^4
-  // tau_iso = alpha / T
+  // tau_iso = 5 eta / (s T)
   //float a = 15.6269; // Nc=3, Nf=3
   float a = 13.8997; // Nc=3, Nf=2.5
 

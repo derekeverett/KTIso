@@ -14,21 +14,21 @@
 //this constructs the tensor v^mu v^nu
 void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameters params)
 {
-  int DIM_PHIP = params.DIM_PHIP;
-  int DIM_VZ = params.DIM_VZ;
-  //float dvz = 2.0 / (float)(DIM_VZ);
-  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+  int nphip = params.nphip;
+  int nvz = params.nvz;
+  //float dvz = 2.0 / (float)(nvz);
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   #pragma omp parallel for
-  for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+  for (int iphip = 0; iphip < nphip; iphip++)
   {
-    float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
-    for (int ivz = 0; ivz < DIM_VZ; ivz++)
+    float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
+    for (int ivz = 0; ivz < nvz; ivz++)
     {
       float vz = -1.0 + (float)ivz * dvz_2;
       //float vz = vz_quad[ivz][0];
 
-      if (DIM_VZ == 1) vz = 0.0;
+      if (nvz == 1) vz = 0.0;
 
       hypertrigTable[0][iphip][ivz] = 1.0; //p^t, p^t component
       hypertrigTable[1][iphip][ivz] = cos(phip); //p^t, p^x
@@ -47,43 +47,43 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
 
 void calculateStressTensor(float **stressTensor, float ***density, float ***hypertrigTable, float **vz_quad, float t, parameters params)
 {
-  int DIM_PHIP = params.DIM_PHIP;
-  int DIM = params.DIM;
-  float d_phip = (2.0 * M_PI) / float(DIM_PHIP);
-  int DIM_VZ = params.DIM_VZ;
-  float dvz = 2.0 / (float)(DIM_VZ);
+  int nphip = params.nphip;
+  int ntot = params.ntot;
+  float d_phip = (2.0 * M_PI) / float(nphip);
+  int nvz = params.nvz;
+  float dvz = 2.0 / (float)(nvz);
 
   //Right now just a Riemann Sum over phip and trapezoid rule for vz
   for (int ivar = 0; ivar < 10; ivar++)
   {
     #pragma omp parallel for
-    for (int is = 0; is < DIM; is++) //the column packed index for x, y and z
+    for (int is = 0; is < ntot; is++) //the column packed index for x, y and z
     {
 
       //case of F ~ delta(v_z), boost invariant
-      if (DIM_VZ == 1)
+      if (nvz == 1)
       {
         float integral = 0.0;
-        for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+        for (int iphip = 0; iphip < nphip; iphip++)
         {
           integral += density[is][iphip][0] * hypertrigTable[ivar][iphip][0];
-        } // for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+        } // for (int iphip = 0; iphip < nphip; iphip++)
         //stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) / t; //should we divide by tau???
         stressTensor[ivar][is] = integral * (d_phip / (4.0 * M_PI) );
-      } // if (DIM_VZ == 1)
+      } // if (nvz == 1)
 
       else
       {
         float integral = 0.0;
-        for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+        for (int iphip = 0; iphip < nphip; iphip++)
         {
-          for (int ivz = 0; ivz < DIM_VZ; ivz++)
+          for (int ivz = 0; ivz < nvz; ivz++)
           {
             if (density[is][iphip][ivz] < 0.0) printf("Warning : F < 0 \n");
 
             float vz_weight = 1.0;
             //float vz_weight = vz_quad[ivz][1];
-            if ( (ivz == 0) || (ivz == DIM_VZ - 1) ) vz_weight = 0.5;
+            if ( (ivz == 0) || (ivz == nvz - 1) ) vz_weight = 0.5;
             integral += density[is][iphip][ivz] * hypertrigTable[ivar][iphip][ivz] * vz_weight;
           }
         }
@@ -92,19 +92,19 @@ void calculateStressTensor(float **stressTensor, float ***density, float ***hype
         //stressTensor[ivar][is] = integral * (d_phip / (2.0 * M_PI) ) * 2.0;
 
       } //else
-    } //for (int is = 0; is < DIM; is++)
+    } //for (int is = 0; is < ntot; is++)
   } // for (int ivar = 0; ivar < 10; ivar++)
 }
 
 void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVelocity, parameters params)
 {
-  int DIM = params.DIM;
+  int ntot = params.ntot;
 
   //float tolerance = 1.0e-5;
   float gamma_max = 100.0;
 
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
     gsl_matrix *Tmunu; //T^(mu,nu) with two contravariant indices; we need to lower an index
     //using the metric to find the eigenvectors of T^(mu)_(nu) with one contravariant and one contravariant index
@@ -203,14 +203,14 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
       flowVelocity[2][is] = 0.0;
       flowVelocity[3][is] = 0.0;
     }
-  } // for (int is; is < DIM; ...)
+  } // for (int is; is < ntot; ...)
 } //solveEigenSystem()
 
 void calculateBulkPressure(float **stressTensor, float *energyDensity, float *pressure, float *bulkPressure, parameters params)
 {
-  int DIM = params.DIM;
+  int ntot = params.ntot;
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
     // PI = -1/3 * (T^(mu)_(mu) - epsilon) - p
     // T^(mu)_(mu) = T^(0,0) - T^(1,1) - T^(2,2) - (TAU^2)T^(3,3)
@@ -220,9 +220,9 @@ void calculateBulkPressure(float **stressTensor, float *energyDensity, float *pr
 }
 void calculateShearViscTensor(float **stressTensor, float *energyDensity, float **flowVelocity, float *pressure, float *bulkPressure, float **shearTensor, parameters params)
 {
-  int DIM = params.DIM;
+  int ntot = params.ntot;
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
     // pi^(mu,nu) = T^(mu,nu) - epsilon * u^(mu)u^(nu) + (P + PI) * (g^(mu,nu) - u^(mu)u^(nu))
     //calculate ten components : upper triangular part
@@ -244,17 +244,17 @@ void calculateShearViscTensor(float **stressTensor, float *energyDensity, float 
 /*
 calculateF_iso(float ***F_iso, float ***density, float *energyDensity, float **flowVelocity, parameters params)
 {
-  int DIM = params.DIM;
-  int DIM_PHIP = params.DIM_PHIP;
+  int ntot = params.ntot;
+  int nphip = params.nphip;
   float alpha = params.ALPHA;
-  int DIM_VZ = params.DIM_VZ;
-  //float dvz = 2.0 / (DIM_VZ - 1);
+  int nvz = params.nvz;
+  //float dvz = 2.0 / (nvz - 1);
 
   int warn_flag = 1;
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
     float u0 = flowVelocity[0][is];
     float ux = flowVelocity[1][is];
@@ -270,13 +270,13 @@ calculateF_iso(float ***F_iso, float ***density, float *energyDensity, float **f
       printf("Warning: tau_iso = %f < 3*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
       warn_flag = 0;
     }
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < nphip; iphip++)
     {
-      float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+      float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
       float vx = cos(phip);
       float vy = sin(phip);
 
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
         float F = density[is][iphip][ivz];
 
@@ -284,22 +284,22 @@ calculateF_iso(float ***F_iso, float ***density, float *energyDensity, float **f
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
 
-        //if (iphip == 0 && is == (DIM - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
-      } //for (int ivz = 0; ivz < DIM_VZ; ivz++)
-    } //for (int iphip; iphip < DIM_PHIP; iphip++)
-  } //for (int is = 0; is < DIM; is++)
+        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < nvz; ivz++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
 
 }
 */
 
 float calculateLongitudinalWork(float **stressTensor, float t, float dt, parameters params)
 {
-  int DIM = params.DIM;
-  float dx = params.DX;
-  float dy = params.DY;
+  int ntot = params.ntot;
+  float dx = params.dx;
+  float dy = params.dy;
 
   float work = 0.0;
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
     float T_zz = stressTensor[9][is];
     work += T_zz;

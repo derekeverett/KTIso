@@ -5,7 +5,7 @@ int main(void)
   //Declare an instance of FREESTREAMMILNE class
   ITA isotropize;
 
-  //try to initialize the energy density from a vector of DIMX * DIMY * DIMETA elements
+  //try to initialize the energy density from a vector 
   /*
   int npoints = 101 * 101;
   size_t size = npoints * sizeof(double);

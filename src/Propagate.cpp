@@ -18,44 +18,44 @@
 void updateDensity(float ***density, float ***density_p, parameters params)
 {
   //do a value swap
-  for (int is = 0; is < params.DIM; is++)
+  for (int is = 0; is < params.ntot; is++)
   {
-    for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < params.nphip; iphip++)
     {
-      for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < params.nvz; ivz++)
       {
         density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      } //for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
-    } //for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-  } //for (int is = 0; is < params.DIM; is++)
+      } //for (int ivz = 0; ivz < params.nvz; ivz++)
+    } //for (int iphip = 0; iphip < params.nphip; iphip++)
+  } //for (int is = 0; is < params.ntot; is++)
 }
 void propagateX(float ***density, float ***density_p, float dt, parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  int DIM_PHIP = params.DIM_PHIP;
-  float dx = params.DX;
-  int DIM_VZ = params.DIM_VZ;
+  int nx = params.nx;
+  int ny = params.ny;
+  int nphip = params.nphip;
+  float dx = params.dx;
+  int nvz = params.nvz;
 
-  //using is = DIM_Y * ix + iy
-  int x_stride = DIM_Y;
+  //using is = ny * ix + iy
+  int x_stride = ny;
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
-  for (int ix = 2; ix < DIM_X - 2; ix++)
+  for (int ix = 2; ix < nx - 2; ix++)
   {
-    for (int iy = 2; iy < DIM_Y - 2; iy++)
+    for (int iy = 2; iy < ny - 2; iy++)
     {
-      int is = (DIM_Y * ix) + iy;
+      int is = (ny * ix) + iy;
       int is_r = is + x_stride;
       int is_l = is - x_stride;
 
-      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      for (int iphip = 0; iphip < nphip; iphip++)
       {
-        float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+        float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
         float vx = cos(phip);
 
-        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        for (int ivz = 0; ivz < nvz; ivz++)
         {
           float F = density_p[is][iphip][ivz];
           float F_px = density_p[is_r][iphip][ivz];
@@ -82,39 +82,39 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
           //update the value of F(x; phip)
           density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
         }
-      } //for (int iphip; iphip < DIM_PHIP; iphip++)
-    } //for (int iy = 0; iy < DIM_Y; iy++)
-  } //for (int ix = 0; ix < DIM_X; ix++)
+      } //for (int iphip; iphip < nphip; iphip++)
+    } //for (int iy = 0; iy < ny; iy++)
+  } //for (int ix = 0; ix < nx; ix++)
 
 }
 
 void propagateY(float ***density, float ***density_p, float dt, parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  int DIM_PHIP = params.DIM_PHIP;
-  float dy = params.DY;
-  int DIM_VZ = params.DIM_VZ;
+  int nx = params.nx;
+  int ny = params.ny;
+  int nphip = params.nphip;
+  float dy = params.dy;
+  int nvz = params.nvz;
 
-  //using is = DIM_Y * ix + iy
+  //using is = ny * ix + iy
   int y_stride = 1;
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
-  for (int ix = 2; ix < DIM_X - 2; ix++)
+  for (int ix = 2; ix < nx - 2; ix++)
   {
-    for (int iy = 2; iy < DIM_Y - 2; iy++)
+    for (int iy = 2; iy < ny - 2; iy++)
     {
-      int is = (DIM_Y * ix) + iy;
+      int is = (ny * ix) + iy;
       int is_t = is + y_stride;
       int is_b = is - y_stride;
 
-      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      for (int iphip = 0; iphip < nphip; iphip++)
       {
-        float phip = float(iphip) * (2.0 * M_PI) / float(DIM_PHIP);
+        float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
         float vy = sin(phip);
 
-        for (int ivz = 0; ivz < DIM_VZ; ivz++)
+        for (int ivz = 0; ivz < nvz; ivz++)
         {
           float F = density_p[is][iphip][ivz];
           float F_py = density_p[is_t][iphip][ivz];
@@ -141,27 +141,27 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
           //update the value of F(x; phip)
           density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
         }
-      } //for (int iphip; iphip < DIM_PHIP; iphip++)
-    } //for (int iy = 2; iy < DIM_Y - 2; iy++)
-  } //for (int ix = 2; ix < DIM_X - 2; ix++)
+      } //for (int iphip; iphip < nphip; iphip++)
+    } //for (int iy = 2; iy < ny - 2; iy++)
+  } //for (int ix = 2; ix < nx - 2; ix++)
 }
 
 
 void propagateVz(float ***density, float ***density_p, float **vz_quad, float tau, float dt, parameters params)
 {
-  int DIM = params.DIM;
-  int DIM_PHIP = params.DIM_PHIP;
-  //float dt = params.DT;
-  int DIM_VZ = params.DIM_VZ;
-  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  //float dt = params.dt;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < nphip; iphip++)
     {
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
         float vz = -1.0 + (float)ivz * dvz_2;
         //float vz = vz_quad[ivz][0];
@@ -170,7 +170,7 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
         if (ivz_l < 0) ivz_l = ivz;
-        if (ivz_r > DIM_VZ - 1) ivz_r = ivz;
+        if (ivz_r > nvz - 1) ivz_r = ivz;
 
         float F = density_p[is][iphip][ivz];
         float F_pvz = density_p[is][iphip][ivz_r];
@@ -203,26 +203,27 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
         density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
 
       }
-    } //for (int iphip; iphip < DIM_PHIP; iphip++)
-  } //for (int is = 0; is < DIM; is++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
 }
 
 //propagate the geometric source term
+//CHECK if this satisfies RK2 ???
 void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, float tau, float dt, parameters params)
 {
-  int DIM = params.DIM;
-  int DIM_PHIP = params.DIM_PHIP;
-  //float dt = params.DT;
-  int DIM_VZ = params.DIM_VZ;
-  float dvz_2 = 2.0 / (float)(DIM_VZ - 1);
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  //float dt = params.dt;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
-  for (int is = 0; is < DIM; is++)
+  for (int is = 0; is < ntot; is++)
   {
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < nphip; iphip++)
     {
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
         float vz = -1.0 + (float)ivz * dvz_2;
         //float vz = vz_quad[ivz][0];
@@ -230,7 +231,7 @@ void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, floa
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
         if (ivz_l < 0) ivz_l = ivz;
-        if (ivz_r > DIM_VZ - 1) ivz_r = ivz;
+        if (ivz_r > nvz - 1) ivz_r = ivz;
 
         float F = density_p[is][iphip][ivz];
         //this term is zero for v_z = 0, and largest for v_z = +/-1
@@ -248,41 +249,40 @@ void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, floa
         //update the value of F(x; phip)
         density[is][iphip][ivz] = y2;
       }
-    } //for (int iphip; iphip < DIM_PHIP; iphip++)
-  } //for (int is = 0; is < DIM; is++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
 }
 
-//sets to zero the density on all edges
 void propagateBoundaries(float ***density, parameters params)
 {
-  int DIM = params.DIM;
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  int DIM_PHIP = params.DIM_PHIP;
-  int DIM_VZ = params.DIM_VZ;
+  int ntot = params.ntot;
+  int nx = params.nx;
+  int ny = params.ny;
+  int nphip = params.nphip;
+  int nvz = params.nvz;
 
   //along boundaries in y
-  for (int ix = 0; ix < DIM_X; ix++)
+  for (int ix = 0; ix < nx; ix++)
   {
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < nphip; iphip++)
     {
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
         int iyll = 0;
         int iyl = 1;
         int iy_b = 2;
 
-        int iy_t = DIM_Y - 3;
-        int iyr = DIM_Y - 2;
-        int iyrr = DIM_Y - 1;
+        int iy_t = ny - 3;
+        int iyr = ny - 2;
+        int iyrr = ny - 1;
 
-        int isll = DIM_Y * ix + iyll;
-        int isl = DIM_Y * ix + iyl;
-        int isr = DIM_Y * ix + iyr;
-        int isrr = DIM_Y * ix + iyrr;
+        int isll = ny * ix + iyll;
+        int isl = ny * ix + iyl;
+        int isr = ny * ix + iyr;
+        int isrr = ny * ix + iyrr;
 
-        int is_b = DIM_Y * ix + iy_b;
-        int is_t = DIM_Y * ix + iy_t;
+        int is_b = ny * ix + iy_b;
+        int is_t = ny * ix + iy_t;
 
         density[isll][iphip][ivz] = density[is_b][iphip][ivz];
         density[isl][iphip][ivz] = density[is_b][iphip][ivz];
@@ -291,30 +291,30 @@ void propagateBoundaries(float ***density, parameters params)
         density[isrr][iphip][ivz] = density[is_t][iphip][ivz];
       }
     }
-  } //for (int ix = 0; ix < DIM_X; ix++)
+  } //for (int ix = 0; ix < nx; ix++)
 
   //along boundaries in x
-  for (int iy = 0; iy < DIM_Y; iy++)
+  for (int iy = 0; iy < ny; iy++)
   {
-    for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+    for (int iphip = 0; iphip < nphip; iphip++)
     {
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
         int ixll = 0;
         int ixl = 1;
         int ix_b = 2;
 
-        int ix_t = DIM_X - 3;
-        int ixr = DIM_X - 2;
-        int ixrr = DIM_X - 1;
+        int ix_t = nx - 3;
+        int ixr = nx - 2;
+        int ixrr = nx - 1;
 
-        int isll = DIM_Y * ixll + iy;
-        int isl = DIM_Y * ixl + iy;
-        int isr = DIM_Y * ixr + iy;
-        int isrr = DIM_Y * ixrr + iy;
+        int isll = ny * ixll + iy;
+        int isl = ny * ixl + iy;
+        int isr = ny * ixr + iy;
+        int isrr = ny * ixrr + iy;
 
-        int is_b = DIM_Y * ix_b + iy;
-        int is_t = DIM_Y * ix_t + iy;
+        int is_b = ny * ix_b + iy;
+        int is_t = ny * ix_t + iy;
 
         density[isll][iphip][ivz] = density[is_b][iphip][ivz];
         density[isl][iphip][ivz] = density[is_b][iphip][ivz];
@@ -323,22 +323,22 @@ void propagateBoundaries(float ***density, parameters params)
         density[isrr][iphip][ivz] = density[is_t][iphip][ivz];
       }
     }
-  } //for (int iy = 0; iy < DIM_Y; iy++)
+  } //for (int iy = 0; iy < ny; iy++)
 
   //along boundaries in vz
-  if (DIM_VZ > 1)
+  if (nvz > 1)
   {
-    for (int is = 0; is < DIM; is++)
+    for (int is = 0; is < ntot; is++)
     {
-      for (int iphip = 0; iphip < DIM_PHIP; iphip++)
+      for (int iphip = 0; iphip < nphip; iphip++)
       {
         density[is][iphip][0] = density[is][iphip][2];
         density[is][iphip][1] = density[is][iphip][2];
-        density[is][iphip][DIM_VZ - 2] = density[is][iphip][DIM_VZ - 3];
-        density[is][iphip][DIM_VZ - 1] = density[is][iphip][DIM_VZ - 3];
+        density[is][iphip][nvz - 2] = density[is][iphip][nvz - 3];
+        density[is][iphip][nvz - 1] = density[is][iphip][nvz - 3];
       }
-    } //if (DIM_VZ > 1)
-  } // if (DIM_VZ > 1)
+    } //if (nvz > 1)
+  } // if (nvz > 1)
 }
 
 void propagateCoordSpace(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
@@ -347,36 +347,13 @@ void propagateCoordSpace(float ***density, float ***density_p, float *energyDens
   //propagate the density forward by one time step according to ITA EQN of Motion
   propagateX(density, density_p, dt, params); //propagate x direction
   propagateBoundaries(density, params);
-
-  //do a value swap
-  for (int is = 0; is < params.DIM; is++)
-  {
-    for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-    {
-      for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
-      {
-        density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      }
-    }
-  }
+  updateDensity(density, density_p, params);
 
   //std::swap(density, density_p); //swap the density and previous value
   propagateY(density, density_p, dt, params); //propagate y direction
   propagateBoundaries(density, params);
+  updateDensity(density, density_p, params);
 
-  //do a value swap
-  for (int is = 0; is < params.DIM; is++)
-  {
-    for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-    {
-      for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
-      {
-        density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      }
-    }
-  }
-
-  //std::swap(density, density_p);
 }
 
 void propagateMomentumSpace(float ***density, float ***density_p, float *energyDensity, float **flowVelocity,
@@ -384,36 +361,11 @@ void propagateMomentumSpace(float ***density, float ***density_p, float *energyD
 {
   propagateVz(density, density_p, vz_quad, t, dt, params); // propagate v_z gradient term
   propagateBoundaries(density, params);
+  updateDensity(density, density_p, params);
 
-  //do a value swap
-  for (int is = 0; is < params.DIM; is++)
-  {
-    for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-    {
-      for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
-      {
-        density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      }
-    }
-  }
-
-  //std::swap(density, density_p);
   propagateVzGeom(density, density_p, vz_quad, t, dt, params); // propagate v_z geometric source term
   propagateBoundaries(density, params);
-
-  //do a value swap
-  for (int is = 0; is < params.DIM; is++)
-  {
-    for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
-    {
-      for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
-      {
-        density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      }
-    }
-  }
-
-  //std::swap(density, density_p);
+  updateDensity(density, density_p, params);
 }
 
 
@@ -421,13 +373,13 @@ void propagateMomentumSpace(float ***density, float ***density_p, float *energyD
 void propagate(float ***density, float ***density_p, float ***density_i,
                 float *energyDensity, float **flowVelocity, float **vz_quad, float t, parameters params)
 {
-  int DIM_VZ = params.DIM_VZ;
-  //int COLLISIONS = params.COLLISIONS;
+  int nvz = params.nvz;
+  //int collisions = params.collisions;
 
-  float dt = params.DT;
+  float dt = params.dt;
   float dt_2 = dt / 2.0;
   //to propagate forward in time, use Strang operator splitting approach to split advection terms in coord space and momentum space
-  if (DIM_VZ > 1)
+  if (nvz > 1)
   {
     propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, dt_2, params);
     propagateMomentumSpace(density, density_p, energyDensity, flowVelocity, vz_quad, t, dt, params);
@@ -436,5 +388,5 @@ void propagate(float ***density, float ***density_p, float ***density_i,
 
   else propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, dt, params);
 
-  //if (COLLISIONS) propagateCollisionTerms(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, dt, params);
+  //if (collisions) propagateCollisionTerms(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, dt, params);
 }

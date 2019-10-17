@@ -9,26 +9,26 @@
 
 void writeScalarToFile(float *var, char name[255], parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  float DX = params.DX;
-  float DY = params.DY;
+  int nx = params.nx;
+  int ny = params.ny;
+  float dx = params.dx;
+  float dy = params.dy;
   char cwd[1024];
   getcwd(cwd, sizeof(cwd));
   std::ofstream myfile;
   char filename[255] = "";
   sprintf(filename, "output/%s.dat", name);
   myfile.open(filename);
-  for (int ix = 0; ix < DIM_X; ix++)
+  for (int ix = 0; ix < nx; ix++)
   {
-    for (int iy = 0; iy < DIM_Y; iy++)
+    for (int iy = 0; iy < ny; iy++)
     {
-        float x = (float)ix * DX  - (((float)(DIM_X-1)) / 2.0 * DX);
-        x = DX * roundf(x / DX);
-        float y = (float)iy * DY  - (((float)(DIM_Y-1)) / 2.0 * DY);
-        y = DY * roundf(y / DY);
+        float x = (float)ix * dx  - (((float)(nx-1)) / 2.0 * dx);
+        x = dx * roundf(x / dx);
+        float y = (float)iy * dy  - (((float)(ny-1)) / 2.0 * dy);
+        y = dy * roundf(y / dy);
 
-        int is = (DIM_Y) * ix +  iy; //the column packed index spanning x, y,
+        int is = (ny) * ix +  iy; //the column packed index spanning x, y,
 
         myfile << x << " " << y << " " << var[is] << "\n";
     }
@@ -38,27 +38,27 @@ void writeScalarToFile(float *var, char name[255], parameters params)
 
 void writeVectorToFile(float **var, char name[255], int idx, parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  float DX = params.DX;
-  float DY = params.DY;
+  int nx = params.nx;
+  int ny = params.ny;
+  float dx = params.dx;
+  float dy = params.dy;
   char cwd[1024];
   getcwd(cwd, sizeof(cwd));
   std::ofstream myfile;
   char filename[255] = "";
   sprintf(filename, "output/%s.dat", name);
   myfile.open(filename);
-  for (int ix = 0; ix < DIM_X; ix++)
+  for (int ix = 0; ix < nx; ix++)
   {
-    for (int iy = 0; iy < DIM_Y; iy++)
+    for (int iy = 0; iy < ny; iy++)
     {
 
-        float x = (float)ix * DX  - (((float)(DIM_X-1)) / 2.0 * DX);
-        x = DX * roundf(x / DX); //rounding for regularly spaced values
-        float y = (float)iy * DY  - (((float)(DIM_Y-1)) / 2.0 * DY);
-        y = DY * roundf(y / DY);
+        float x = (float)ix * dx  - (((float)(nx-1)) / 2.0 * dx);
+        x = dx * roundf(x / dx); //rounding for regularly spaced values
+        float y = (float)iy * dy  - (((float)(ny-1)) / 2.0 * dy);
+        y = dy * roundf(y / dy);
 
-        int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y,
+        int is = (ny) * ix + iy; //the column packed index spanning x, y,
         myfile << x << " " << y << " "  << var[idx][is] << "\n";
     }
   }
@@ -69,8 +69,8 @@ void writeVectorToFile(float **var, char name[255], int idx, parameters params)
 // as regularly spaced values
 void writeScalarToFileProjection(float *var, char name[255], parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
+  int nx = params.nx;
+  int ny = params.ny;
 
   char cwd[1024];
   getcwd(cwd, sizeof(cwd));
@@ -78,11 +78,11 @@ void writeScalarToFileProjection(float *var, char name[255], parameters params)
   char filename[255] = "";
   sprintf(filename, "output/%s.dat", name);
   myfile.open(filename);
-  for (int iy = 0; iy < DIM_Y; iy++)
+  for (int iy = 0; iy < ny; iy++)
   {
-    for (int ix = 0; ix < DIM_X; ix++)
+    for (int ix = 0; ix < nx; ix++)
     {
-      int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y, eta
+      int is = (ny) * ix + iy; //the column packed index spanning x, y, eta
       myfile << var[is] << " "; //different columns for x values
     }
     myfile << "\n"; // different rows correspond to different y values
@@ -92,19 +92,19 @@ void writeScalarToFileProjection(float *var, char name[255], parameters params)
 
 void writeVectorToFileProjection(float **var, char name[255], int idx, parameters params)
 {
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
+  int nx = params.nx;
+  int ny = params.ny;
   char cwd[1024];
   getcwd(cwd, sizeof(cwd));
   std::ofstream myfile;
   char filename[255] = "";
   sprintf(filename, "output/%s.dat", name);
   myfile.open(filename);
-  for (int iy = 0; iy < DIM_Y; iy++)
+  for (int iy = 0; iy < ny; iy++)
   {
-    for (int ix = 0; ix < DIM_X; ix++)
+    for (int ix = 0; ix < nx; ix++)
     {
-      int is = (DIM_Y) * ix + iy; //the column packed index spanning x, y,
+      int is = (ny) * ix + iy; //the column packed index spanning x, y,
       myfile << var[idx][is] << " "; //different columns for x values
     }
     myfile << "\n"; // different rows correspond to different y values
@@ -117,15 +117,15 @@ void writeVectorToFileProjection(float **var, char name[255], int idx, parameter
 void readDensityFile(float *density, char name[255], parameters params)
 {
 
-  int DIM_X = params.DIM_X;
-  int DIM_Y = params.DIM_Y;
-  int DIM_ETA = params.DIM_ETA;
-  float DX = params.DX;
-  float DY = params.DY;
+  int nx = params.nx;
+  int ny = params.ny;
+  int ntot_ETA = params.ntot_ETA;
+  float dx = params.dx;
+  float dy = params.dy;
   float DETA = params.DETA;
-  float xmin = (-1.0) * ((float)(DIM_X-1) / 2.0) * DX;
-  float ymin = (-1.0) * ((float)(DIM_Y-1) / 2.0) * DY;
-  float etamin = (-1.0) * ((float)(DIM_ETA-1) / 2.0) * DETA;
+  float xmin = (-1.0) * ((float)(nx-1) / 2.0) * dx;
+  float ymin = (-1.0) * ((float)(ny-1) / 2.0) * dy;
+  float etamin = (-1.0) * ((float)(ntot_ETA-1) / 2.0) * DETA;
   float x, y, eta, value;
 
   char filename[255] = "";
@@ -139,10 +139,10 @@ void readDensityFile(float *density, char name[255], parameters params)
   }
   while (infile >> x >> y >> eta >> value)
   {
-    int ix = (int)round((x - xmin) / DX);
-    int iy = (int)round((y - ymin) / DY);
+    int ix = (int)round((x - xmin) / dx);
+    int iy = (int)round((y - ymin) / dy);
     int ieta = (int)round((eta - etamin) / DETA);
-    int is = (DIM_Y * DIM_ETA * ix) + (DIM_ETA * iy) + ieta;
+    int is = (ny * ntot_ETA * ix) + (ntot_ETA * iy) + ieta;
     density[is] = value;
   }
   infile.close();
@@ -170,37 +170,37 @@ void readInParameters(struct parameters &params)
   else
   {
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.OUTPUTFORMAT = dummyInt;
+    params.output_format = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.IC_ENERGY = dummyInt;
+    params.ic_energy = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.IC_FLOW = dummyInt;
+    params.ic_flow = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.DIM_X = dummyInt;
+    params.nx = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.DIM_Y = dummyInt;
+    params.ny = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.DIM_PHIP = dummyInt;
+    params.nphip = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.DIM_VZ = dummyInt;
+    params.nvz = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.DIM_T = dummyInt;
+    params.nt = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.DX = dummyFloat;
+    params.dx = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.DY = dummyFloat;
+    params.dy = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.DT = dummyFloat;
+    params.dt = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.T0 = dummyFloat;
+    params.t0 = dummyFloat;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.EOS_TYPE = dummyInt;
+    params.eos_type = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.E_FREEZE = dummyFloat;
+    params.e_sw = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.ALPHA = dummyFloat;
+    params.eta_over_s = dummyFloat;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.COLLISIONS = dummyInt;
+    params.collisions = dummyInt;
 
     fclose(fileIn);
   }

@@ -137,51 +137,49 @@ public:
       //declare parameter struct
       struct parameters params;
       //set default parameters in case of missing ita_input file
-      params.OUTPUTFORMAT = 2;
-      params.IC_ENERGY = 5;
-      params.DIM_X = 101;
-      params.DIM_Y = 101;
-      params.DIM_PHIP = 200;
-      params.DIM_T = 100;
-      params.DX = 0.1;
-      params.DY = 0.1;
-      params.DT = 0.05;
-      params.T0 = 0.1;
-      params.EOS_TYPE = 1;
-      params.E_FREEZE = 1.7;
-      params.ALPHA = 10.0;
-      params.COLLISIONS = 1;
+      params.output_format = 2;
+      params.ic_energy = 5;
+      params.nx = 101;
+      params.ny = 101;
+      params.nphip = 200;
+      params.nt = 100;
+      params.dx = 0.1;
+      params.dy = 0.1;
+      params.dt = 0.05;
+      params.t0 = 0.1;
+      params.eos_type = 1;
+      params.e_sw = 1.7;
+      params.eta_over_s = 10.0;
+      params.collisions = 1;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
-      params.DIM = params.DIM_X * params.DIM_Y;
-      int DIM = params.DIM;
-      int DIM_T = params.DIM_T;
-      int DIM_VZ = params.DIM_VZ;
-      int COLLISIONS = params.COLLISIONS;
-
-      float t0 = params.T0;
-      float dt = params.DT;
-      int nt = params.DIM_T;
+      params.ntot = params.nx * params.ny;
+      int ntot = params.ntot;
+      int nt = params.nt;
+      int nvz = params.nvz;
+      int collisions = params.collisions;
+      float t0 = params.t0;
+      float dt = params.dt;
       float tf = t0 + (float)nt * dt;
 
       printf("Parameters are ...\n");
-      printf("(DIM_X, DIM_Y, DIM_PHIP, DIM_VZ) = (%d, %d, %d, %d)\n", params.DIM_X, params.DIM_Y, params.DIM_PHIP, params.DIM_VZ);
-      printf("(DX, DY, DT) = (%.2f fm, %.2f fm, %.2f fm/c)\n", params.DX, params.DY, params.DT);
-      printf("T0 = %.2f fm/c\n", params.T0);
-      printf("DIM_T = %d \n", params.DIM_T);
-      printf("E_FREEZE = %.3f GeV / fm^3 \n", params.E_FREEZE);
+      printf("(nx, ny, nphip, nvz) = (%d, %d, %d, %d)\n", params.nx, params.ny, params.nphip, params.nvz);
+      printf("(dx, dy, dt) = (%.2f fm, %.2f fm, %.2f fm/c)\n", params.dx, params.dy, params.dt);
+      printf("t0 = %.2f fm/c\n", params.t0);
+      printf("nt = %d \n", params.nt);
+      printf("e_sw = %.3f GeV / fm^3 \n", params.e_sw);
 
-      if (COLLISIONS)
+      if (collisions)
       {
         printf("Evolving with collision term : ");
-        printf("alpha = %.2f \n", params.ALPHA);
+        printf("eta/s = %.2f \n", params.eta_over_s);
       }
       else printf("Evolving by freestreaming (no collisions) \n");
 
 
-      if (params.EOS_TYPE == 1) printf("Using EoS : Conformal \n");
-      else if (params.EOS_TYPE == 2) printf("Using EoS : Wuppertal-Budhapest \n");
+      if (params.eos_type == 1) printf("Using EoS : Conformal \n");
+      else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");
       else { printf("Not a valid EoS! \n"); exit(-1); }
 
       const double hbarc = 0.197326938;
@@ -190,20 +188,20 @@ public:
       printf("Allocating memory\n");
       //the ten independent components of the stress tensor
       float **stressTensor = NULL;
-      stressTensor = calloc2dArrayf(stressTensor, 10, params.DIM);
+      stressTensor = calloc2dArrayf(stressTensor, 10, params.ntot);
       //the energy density
       float *energyDensity = NULL;
-      energyDensity = (float *)calloc(params.DIM, sizeof(float));
+      energyDensity = (float *)calloc(params.ntot, sizeof(float));
       //the flow velocity
       float **flowVelocity = NULL;
-      flowVelocity = calloc2dArrayf(flowVelocity, 4, params.DIM);
+      flowVelocity = calloc2dArrayf(flowVelocity, 4, params.ntot);
       //a table containing 10 rows for 10 independent combinations of p_(mu)p_(nu)
       float ***hypertrigTable = NULL;
-      hypertrigTable = calloc3dArrayf(hypertrigTable, 10, params.DIM_PHIP, params.DIM_VZ);
+      hypertrigTable = calloc3dArrayf(hypertrigTable, 10, params.nphip, params.nvz);
 
       //the table containing roots and weights for quadrature in v_z
       float **vz_quad = NULL;
-      vz_quad = calloc2dArrayf(vz_quad, params.DIM_VZ, 2);
+      vz_quad = calloc2dArrayf(vz_quad, params.nvz, 2);
 
       //read in table from file
       /*
@@ -213,7 +211,7 @@ public:
       {
         float root = 0.0;
         float weight = 0.0;
-        for (int row = 0; row < params.DIM_VZ; row++)
+        for (int row = 0; row < params.nvz; row++)
         {
           vz_quad_file >> root >> weight;
           vz_quad[row][0] = root;
@@ -227,15 +225,15 @@ public:
       //construct table on the fly, using cubic spacing in v_z from 0 to 1
       //note that the weights stored in this table are for integration over v_z
       //and should not be used as the differential delta v_z when performing the MacCormack step
-      for (int ivz = 0; ivz < DIM_VZ; ivz++)
+      for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float dvz_linear = 2.0 / (2*DIM_VZ - 1.0);
+        float dvz_linear = 2.0 / (2*nvz - 1.0);
         float vz_linear = 0.0 + (dvz_linear / 2.0) + (ivz * dvz_linear);
         float vz_cub = pow(vz_linear, 3.0);
         vz_quad[ivz][0] = vz_cub;
       }
 
-      for (int ivz = 0; ivz < DIM_VZ - 1; ivz++)
+      for (int ivz = 0; ivz < nvz - 1; ivz++)
       {
         float dvz_cub = vz_quad[ivz+1][0] - vz_quad[ivz][0];
         vz_quad[ivz][1] = dvz_cub;
@@ -243,40 +241,40 @@ public:
 
       //the density F()
       float ***density = NULL;
-      density = calloc3dArrayf(density, params.DIM, params.DIM_PHIP, params.DIM_VZ); // function of x,y,eta and rapidity
+      density = calloc3dArrayf(density, params.ntot, params.nphip, params.nvz); // function of x,y,eta and rapidity
 
       //the table containing the v_z spacing, for adaptive integration routine
       //float ***dvz_table = NULL;
-      //dvz_table = calloc3dArrayf(dvz_table, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      //dvz_table = calloc3dArrayf(dvz_table, params.ntot, params.nphip, params.nvz);
 
       //the previous value of the density F()
       float ***density_p = NULL;
-      density_p = calloc3dArrayf(density_p, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      density_p = calloc3dArrayf(density_p, params.ntot, params.nphip, params.nvz);
 
       //the intermediate value of F() for RK2
       float ***density_i = NULL;
-      density_i = calloc3dArrayf(density_i, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      density_i = calloc3dArrayf(density_i, params.ntot, params.nphip, params.nvz);
 
       float ***density_i2 = NULL;
-      density_i2 = calloc3dArrayf(density_i2, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      density_i2 = calloc3dArrayf(density_i2, params.ntot, params.nphip, params.nvz);
 
       float ***density_i3 = NULL;
-      density_i3 = calloc3dArrayf(density_i3, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      density_i3 = calloc3dArrayf(density_i3, params.ntot, params.nphip, params.nvz);
 
       float ***density_i4 = NULL;
-      density_i4 = calloc3dArrayf(density_i4, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      density_i4 = calloc3dArrayf(density_i4, params.ntot, params.nphip, params.nvz);
 
       //the integral of  1 / (udotv)^2 / (solid angle); this should be one if energy matching is satisfied numerically
       float *energyMatchIntegral = NULL;
-      energyMatchIntegral = (float *)calloc(params.DIM, sizeof(float));
+      energyMatchIntegral = (float *)calloc(params.ntot, sizeof(float));
 
       // u^2 must be 1 numerically
       float *unorm = NULL;
-      unorm = (float *)calloc(params.DIM, sizeof(float));
+      unorm = (float *)calloc(params.ntot, sizeof(float));
 
       //the isotropic (IN LRF!) distribution F_iso
       //float ***F_iso = NULL;
-      //F_iso = calloc3dArrayf(F_iso, params.DIM, params.DIM_PHIP, params.DIM_VZ);
+      //F_iso = calloc3dArrayf(F_iso, params.ntot, params.nphip, params.nvz);
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -305,14 +303,14 @@ public:
       //calculate total energy to check convergence
       calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t0, params);
       float totalEnergy = 0.0;
-      for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-      //totalEnergy *= (params.DX * params.DY * t0);
-      totalEnergy *= (params.DX * params.DY);
+      for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
+      //totalEnergy *= (params.dx * params.dy * t0);
+      totalEnergy *= (params.dx * params.dy);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
       float **F_vz_phip = NULL;
-      F_vz_phip = calloc2dArrayf(F_vz_phip, params.DIM_VZ, params.DIM_PHIP);
+      F_vz_phip = calloc2dArrayf(F_vz_phip, params.nvz, params.nphip);
 
       //The main time step loop
       printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
@@ -329,12 +327,12 @@ public:
       lattice_spacing[2] = dy;
 
       float ****energy_density_evoution;
-      energy_density_evoution = calloc4dArrayf(energy_density_evoution, 2, DIM_X, DIM_Y, 1);
+      energy_density_evoution = calloc4dArrayf(energy_density_evoution, 2, nx, ny, 1);
       //make an array to store all the hydrodynamic variables
       //to be written to file once the freezeout surface is determined by the critical energy density
       int n_hydro_vars = 10; //u1, u2, u3, e, pi11, pi12, pi13, pi22, pi23, Pi (the temperature and pressure are calclated with EoS)
       float *****hydrodynamic_evoution;
-      hydrodynamic_evoution = calloc5dArrayf(hydrodynamic_evoution, n_hydro_vars, 2, DIM_X, DIM_Y, 1);
+      hydrodynamic_evoution = calloc5dArrayf(hydrodynamic_evoution, n_hydro_vars, 2, nx, ny, 1);
       //for 2+1D simulations
       float ***hyperCube3D;
       hyperCube3D = calloc3dArrayf(hyperCube3D, 2, 2, 2);
@@ -348,12 +346,12 @@ public:
       int write_freq = 1;
 
       //the index in grid center
-      int icenter = DIM / 2;
+      int icenter = ntot / 2;
 
       float total_work = 0.0; //total work done by longitudinal pressure
 
       //MAIN TIME STEP LOOP
-      for (int it = 1; it < DIM_T + 1; it++)
+      for (int it = 1; it < nt + 1; it++)
       {
         float t = t0 + it * dt;
 
@@ -364,7 +362,7 @@ public:
         //this propagates ITA eqns of motion terms corresponding to Collisions and freestreaming
         propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
 
-        if (params.COLLISIONS)
+        if (params.collisions)
         {
           //first find the current energy density and flow after advection updates
           calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
@@ -417,7 +415,7 @@ public:
 
           updateDensity(density, density_p, params);
 
-        } // if (params.COLLISIONS)
+        } // if (params.collisions)
 
 
         //this propagates ITA eqns of motion terms corresponding to physical energy-momentum deposition (Jets)
@@ -433,9 +431,9 @@ public:
         char filename[255] = "";
         sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
         myfile.open(filename);
-        for (int ivz = 0; ivz < params.DIM_VZ; ivz++)
+        for (int ivz = 0; ivz < params.nvz; ivz++)
         {
-          for (int iphip = 0; iphip < params.DIM_PHIP; iphip++)
+          for (int iphip = 0; iphip < params.nphip; iphip++)
           {
             myfile << density_p[icenter][iphip][ivz] << " ";
           }
@@ -450,14 +448,14 @@ public:
         {
           float eps = energyDensity[icenter];
           float T = temperatureFromEnergyDensity(eps);
-          float tau_iso = params.ALPHA / T;
+          float tau_iso = 5. * params.eta_over_s / T;
           printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
-                  it, DIM_T, t, eps * hbarc, T, tau_iso);
+                  it, nt, t, eps * hbarc, T, tau_iso);
 
           float totalEnergy = 0.0;
-          for (int is = 0; is < params.DIM; is++) totalEnergy += stressTensor[0][is];
-          //totalEnergy *= (params.DX * params.DY * t);
-          totalEnergy *= (params.DX * params.DY);
+          for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
+          //totalEnergy *= (params.dx * params.dy * t);
+          totalEnergy *= (params.dx * params.dy);
 
           //total energy left at midrapidity considering longitudinal work
           float totalEnergyMid = totalEnergy + total_work;
@@ -465,67 +463,67 @@ public:
           printf("Total energy left at midrap + total long. work : %f \n", totalEnergy);
 
           char e_file[255] = "";
-          char T00_file[255] = "";
+          char t00_file[255] = "";
           char ux_file[255] = "";
 	        char un_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
-          sprintf(T00_file, "T00_projection_%.3f", t);
+          sprintf(t00_file, "t00_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
 	        sprintf(un_file, "un_projection_%.3f", t);
           writeScalarToFileProjection(energyDensity, e_file, params);
-          writeVectorToFileProjection(stressTensor, T00_file, 0, params);
+          writeVectorToFileProjection(stressTensor, t00_file, 0, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
         }
 
-      } // for (int it = 0; it < DIM_T; it++)
+      } // for (int it = 0; it < nt; it++)
 
       //variables to store the hydrodynamic variables after the Landau matching is performed
       //the pressure
       float *pressure = NULL;
-      pressure = (float *)calloc(params.DIM, sizeof(float));
+      pressure = (float *)calloc(params.ntot, sizeof(float));
       //the bulk pressure Pi
       float *bulkPressure = NULL;
-      bulkPressure = (float *)calloc(params.DIM, sizeof(float));
+      bulkPressure = (float *)calloc(params.ntot, sizeof(float));
       //the shear stress tensor
       float **shearTensor = NULL;
-      shearTensor = calloc2dArrayf(shearTensor, 10, params.DIM); //calculate 10 components, can check tracelessness/orthogonality for accuracy
+      shearTensor = calloc2dArrayf(shearTensor, 10, params.ntot); //calculate 10 components, can check tracelessness/orthogonality for accuracy
       //calculate hydro variables
       calculatePressure(energyDensity, pressure, params);
       calculateBulkPressure(stressTensor, energyDensity, pressure, bulkPressure, params);
       calculateShearViscTensor(stressTensor, energyDensity, flowVelocity, pressure, bulkPressure, shearTensor, params);
 
       float totalEnergyAfter = 0.0;
-      for (int is = 0; is < params.DIM; is++) totalEnergyAfter += stressTensor[0][is];
-      //totalEnergyAfter *= (params.DX * params.DY * tf);
-      totalEnergyAfter *= (params.DX * params.DY);
+      for (int is = 0; is < params.ntot; is++) totalEnergyAfter += stressTensor[0][is];
+      //totalEnergyAfter *= (params.dx * params.dy * tf);
+      totalEnergyAfter *= (params.dx * params.dy);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'
       float totalEnergyAfterLRF = 0.0;
-      for (int is = 0; is < params.DIM; is++) totalEnergyAfterLRF += energyDensity[is];
-      totalEnergyAfterLRF *= (params.DX * params.DY);
+      for (int is = 0; is < params.ntot; is++) totalEnergyAfterLRF += energyDensity[is];
+      totalEnergyAfterLRF *= (params.dx * params.dy);
 
       float totalEnergyInsideHypersurf = 0.0;
-      for (int is = 0; is < params.DIM; is++)
+      for (int is = 0; is < params.ntot; is++)
       {
-        if ( (energyDensity[is] * hbarc) > params.E_FREEZE) totalEnergyInsideHypersurf += energyDensity[is];
+        if ( (energyDensity[is] * hbarc) > params.e_sw) totalEnergyInsideHypersurf += energyDensity[is];
       }
-      totalEnergyInsideHypersurf *= (params.DX * params.DY);
+      totalEnergyInsideHypersurf *= (params.dx * params.dy);
       printf("Fraction of LRF energy contained in Freezeout Hypersurface : %f \n", totalEnergyInsideHypersurf / totalEnergyAfterLRF);
 
       //////////////////////////////////HYDRO VALIDITY//////////////////////////////////
       //bulk inv reynolds #
       float *R_Pi_Inv = NULL;
-      R_Pi_Inv = (float *)calloc(params.DIM, sizeof(float));
+      R_Pi_Inv = (float *)calloc(params.ntot, sizeof(float));
       //shear inv reynolds #
       float *R_pimunu_Inv = NULL;
-      R_pimunu_Inv = (float *)calloc(params.DIM, sizeof(float));
+      R_pimunu_Inv = (float *)calloc(params.ntot, sizeof(float));
       calculateBulkInvReynolds(pressure, bulkPressure, R_Pi_Inv, params);
       calculateShearInvReynolds(energyDensity, pressure, shearTensor, R_pimunu_Inv, params);
       writeScalarToFileProjection(R_Pi_Inv, (char *)"R_Pi_Inv_projection", params);
       writeScalarToFileProjection(R_pimunu_Inv, (char *)"R_pimunu_Inv_projection", params);
-      //int ctr = (DIM_Y * DIM_ETA * ((DIM_X - 1) / 2)) + (DIM_ETA * ((DIM_Y - 1) / 2)) + ((DIM_ETA - 1) / 2);
+      //int ctr = (ny * ntot_ETA * ((nx - 1) / 2)) + (ntot_ETA * ((ny - 1) / 2)) + ((ntot_ETA - 1) / 2);
       //printf("R_Pi_Inv at center : %f \n", R_Pi_Inv[ctr]);
       //printf("R_pimunu_Inv at center : %f \n", R_pimunu_Inv[ctr]);
       free(R_Pi_Inv);
@@ -575,27 +573,27 @@ public:
       writeVectorToFileProjection(shearTensor, (char *)"pi_eta_eta_projection", 9,params);
 
       //support for JETSCAPE - write hydro variables to vectors
-      final_energy_density.resize(params.DIM);
-      final_pressure.resize(params.DIM);
-      final_ut.resize(params.DIM);
-      final_ux.resize(params.DIM);
-      final_uy.resize(params.DIM);
-      final_un.resize(params.DIM);
-      final_pitt.resize(params.DIM);
-      final_pitx.resize(params.DIM);
-      final_pity.resize(params.DIM);
-      final_pitn.resize(params.DIM);
-      final_pixx.resize(params.DIM);
-      final_pixy.resize(params.DIM);
-      final_pixn.resize(params.DIM);
-      final_piyy.resize(params.DIM);
-      final_piyn.resize(params.DIM);
-      final_pinn.resize(params.DIM);
-      final_Pi.resize(params.DIM);
+      final_energy_density.resize(params.ntot);
+      final_pressure.resize(params.ntot);
+      final_ut.resize(params.ntot);
+      final_ux.resize(params.ntot);
+      final_uy.resize(params.ntot);
+      final_un.resize(params.ntot);
+      final_pitt.resize(params.ntot);
+      final_pitx.resize(params.ntot);
+      final_pity.resize(params.ntot);
+      final_pitn.resize(params.ntot);
+      final_pixx.resize(params.ntot);
+      final_pixy.resize(params.ntot);
+      final_pixn.resize(params.ntot);
+      final_piyy.resize(params.ntot);
+      final_piyn.resize(params.ntot);
+      final_pinn.resize(params.ntot);
+      final_Pi.resize(params.ntot);
 
-      if ( (params.OUTPUTFORMAT == 2) || (params.OUTPUTFORMAT == 3) )
+      if ( (params.output_format == 2) || (params.output_format == 3) )
       {
-        for (int is = 0; is < params.DIM; is++)
+        for (int is = 0; is < params.ntot; is++)
         {
           //converting back to GeV / fm^3 for use in JETSCAPE
           final_energy_density[is] = (double)energyDensity[is] * hbarc;
