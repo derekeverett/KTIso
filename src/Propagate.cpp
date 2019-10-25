@@ -36,6 +36,7 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
   int nphip = params.nphip;
   float dx = params.dx;
   int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //using is = ny * ix + iy
   int x_stride = ny;
@@ -53,10 +54,16 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
       for (int iphip = 0; iphip < nphip; iphip++)
       {
         float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-        float vx = cos(phip);
+        //float vx = cos(phip);
 
         for (int ivz = 0; ivz < nvz; ivz++)
         {
+          float vz = -1.0 + (float)ivz * dvz_2;
+          float thetap = acos(vz);
+          float sin_thetap = sin(thetap);
+          float vx = sin_thetap * cos(phip);
+          //float vy = sin_thetap * sin(phip);
+
           float F = density_p[is][iphip][ivz];
           float F_px = density_p[is_r][iphip][ivz];
           float F_mx = density_p[is_l][iphip][ivz];
@@ -95,6 +102,7 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
   int nphip = params.nphip;
   float dy = params.dy;
   int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //using is = ny * ix + iy
   int y_stride = 1;
@@ -112,10 +120,16 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
       for (int iphip = 0; iphip < nphip; iphip++)
       {
         float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-        float vy = sin(phip);
+        //float vy = sin(phip);
 
         for (int ivz = 0; ivz < nvz; ivz++)
         {
+          float vz = -1.0 + (float)ivz * dvz_2;
+          float thetap = acos(vz);
+          float sin_thetap = sin(thetap);
+          //float vx = sin_thetap * cos(phip);
+          float vy = sin_thetap * sin(phip);
+
           float F = density_p[is][iphip][ivz];
           float F_py = density_p[is_t][iphip][ivz];
           float F_my = density_p[is_b][iphip][ivz];

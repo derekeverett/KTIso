@@ -27,9 +27,14 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
     {
       float vz = -1.0 + (float)ivz * dvz_2;
       //float vz = vz_quad[ivz][0];
-
       if (nvz == 1) vz = 0.0;
 
+      float thetap = acos(vz);
+      float sin_thetap = sin(thetap);
+      float vx = sin_thetap * cos(phip);
+      float vy = sin_thetap * sin(phip);
+
+      /*
       hypertrigTable[0][iphip][ivz] = 1.0; //p^t, p^t component
       hypertrigTable[1][iphip][ivz] = cos(phip); //p^t, p^x
       hypertrigTable[2][iphip][ivz] = sin(phip); //p^t, p^y
@@ -39,6 +44,18 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
       hypertrigTable[6][iphip][ivz] = cos(phip) * vz; //p^x, p^z
       hypertrigTable[7][iphip][ivz] = sin(phip) * sin(phip); //p^y, p^y
       hypertrigTable[8][iphip][ivz] = sin(phip) * vz; //p^y, p^z
+      hypertrigTable[9][iphip][ivz] = vz * vz; //p^z, p^z
+      */
+
+      hypertrigTable[0][iphip][ivz] = 1.0; //p^t, p^t component
+      hypertrigTable[1][iphip][ivz] = vx; //p^t, p^x
+      hypertrigTable[2][iphip][ivz] = vy; //p^t, p^y
+      hypertrigTable[3][iphip][ivz] = vz; //p^t, p^z
+      hypertrigTable[4][iphip][ivz] = vx * vx; //p^x, p^x
+      hypertrigTable[5][iphip][ivz] = vx * vy; //p^x, p^y
+      hypertrigTable[6][iphip][ivz] = vx * vz; //p^x, p^z
+      hypertrigTable[7][iphip][ivz] = vy * vy; //p^y, p^y
+      hypertrigTable[8][iphip][ivz] = vy * vz; //p^y, p^z
       hypertrigTable[9][iphip][ivz] = vz * vz; //p^z, p^z
     }
 

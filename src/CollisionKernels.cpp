@@ -21,6 +21,7 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
   //float dvz = 2.0 / (nvz - 1);
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   int warn_flag = 1;
 
@@ -45,11 +46,17 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      float vx = cos(phip);
-      float vy = sin(phip);
+      //float vx = cos(phip);
+      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
+        float vz = -1.0 + (float)ivz * dvz_2;
+        float thetap = acos(vz);
+        float sin_thetap = sin(thetap);
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
         float F = density_p[is][iphip][ivz];
 
         //collision term
@@ -76,6 +83,7 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
   //float dvz = 2.0 / (nvz - 1);
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   int warn_flag = 1;
 
@@ -100,11 +108,17 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      float vx = cos(phip);
-      float vy = sin(phip);
+      //float vx = cos(phip);
+      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
+        float vz = -1.0 + (float)ivz * dvz_2;
+        float thetap = acos(vz);
+        float sin_thetap = sin(thetap);
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
         float F = density_i[is][iphip][ivz];
 
         //collision term
@@ -164,6 +178,7 @@ void propagateITACollRK4(float ***density, float ***density_i4, float ***density
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
   //float dvz = 2.0 / (nvz - 1);
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   int warn_flag = 1;
 
@@ -188,11 +203,16 @@ void propagateITACollRK4(float ***density, float ***density_i4, float ***density
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      float vx = cos(phip);
-      float vy = sin(phip);
+      //float vx = cos(phip);
+      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
+        float vz = -1.0 + (float)ivz * dvz_2;
+        float thetap = acos(vz);
+        float sin_thetap = sin(thetap);
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
 
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
@@ -232,6 +252,7 @@ void propagateToyColl(float ***density, float ***density_p, parameters params)
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
   //float dvz = 2.0 / (nvz - 1);
+  //float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
@@ -308,6 +329,7 @@ void propagateRelaxMethodColl2(float ***density, float ***density_p, float *ener
   int nphip = params.nphip;
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
@@ -326,11 +348,17 @@ void propagateRelaxMethodColl2(float ***density, float ***density_p, float *ener
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      float vx = cos(phip);
-      float vy = sin(phip);
+      //float vx = cos(phip);
+      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
+        float vz = -1.0 + (float)ivz * dvz_2;
+        float thetap = acos(vz);
+        float sin_thetap = sin(thetap);
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
         float F = density_p[is][iphip][ivz];
         float udotv = u0 - ux*vx - uy*vy;
         float udotv4 = powf(udotv, 4.0);
@@ -392,6 +420,7 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
   int nphip = params.nphip;
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
 
   int warn_flag = 1;
 
@@ -415,11 +444,17 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      float vx = cos(phip);
-      float vy = sin(phip);
+      //float vx = cos(phip);
+      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
+        float vz = -1.0 + (float)ivz * dvz_2;
+        float thetap = acos(vz);
+        float sin_thetap = sin(thetap);
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
         float F = density_p[is][iphip][ivz];
 
         //collision term
@@ -442,6 +477,7 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
 }
 
 //this boosts F into the LRF
+// NOTE THIS IS BROKEN; vx, vy need sin_thetap factors!! 
 void propagateRelaxMethodCollLRF(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, float dt, parameters params)
 {
   int ntot = params.ntot;
