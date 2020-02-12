@@ -25,9 +25,10 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
     float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
     for (int ivz = 0; ivz < nvz; ivz++)
     {
-      float vz = -1.0 + (float)ivz * dvz_2;
+      //float vz = -1.0 + (float)ivz * dvz_2;
+      float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
       //float vz = vz_quad[ivz][0];
-      if (nvz == 1) vz = 0.0;
+      //if (nvz == 1) vz = 0.0;
 
       float thetap = acos(vz);
       float sin_thetap = sin(thetap);

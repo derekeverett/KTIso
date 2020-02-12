@@ -51,7 +51,8 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
         float sin_thetap = sin(thetap);
         float vx = sin_thetap * cos(phip);
@@ -113,7 +114,8 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
         float sin_thetap = sin(thetap);
         float vx = sin_thetap * cos(phip);
@@ -208,7 +210,8 @@ void propagateITACollRK4(float ***density, float ***density_i4, float ***density
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
         float sin_thetap = sin(thetap);
         float vx = sin_thetap * cos(phip);
@@ -353,7 +356,8 @@ void propagateRelaxMethodColl2(float ***density, float ***density_p, float *ener
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
         float sin_thetap = sin(thetap);
         float vx = sin_thetap * cos(phip);
@@ -449,7 +453,8 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
         float sin_thetap = sin(thetap);
         float vx = sin_thetap * cos(phip);
@@ -477,7 +482,7 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
 }
 
 //this boosts F into the LRF
-// NOTE THIS IS BROKEN; vx, vy need sin_thetap factors!! 
+// NOTE THIS IS BROKEN; vx, vy need sin_thetap factors!!
 void propagateRelaxMethodCollLRF(float ***density, float ***density_p, float *energyDensity, float **flowVelocity, float dt, parameters params)
 {
   int ntot = params.ntot;

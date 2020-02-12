@@ -359,7 +359,7 @@ public:
         float work = calculateLongitudinalWork(stressTensor, t-dt, dt, params);
         total_work += work;
 
-        //this propagates ITA eqns of motion terms corresponding to Collisions and freestreaming
+        //this propagates ITA eqns of motion terms corresponding to freestreaming
         propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
 
         if (params.collisions)

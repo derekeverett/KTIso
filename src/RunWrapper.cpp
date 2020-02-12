@@ -2,10 +2,10 @@
 
 int main(void)
 {
-  //Declare an instance of FREESTREAMMILNE class
+  //Declare an instance of ITA class
   ITA isotropize;
 
-  //try to initialize the energy density from a vector 
+  //try to initialize the energy density from a vector
   /*
   int npoints = 101 * 101;
   size_t size = npoints * sizeof(double);
@@ -27,19 +27,9 @@ int main(void)
   std::vector<double> final_piyn(size);
   std::vector<double> final_pinn(size);
   std::vector<double> final_Pi(size);
-
-  //this step would be handled by another module... e.g. TRENTO
-  for (int i = 0; i < npoints; i++) init_e[i] = 1.0; //initialize to nontrivial values
-
-
-  //tell fsmilne how big the grid is
-  fsmilne.gridSize = npoints;
-
-  //pass the initial energy density vector
-  //this function is only used when IC.ENERGY == 5 ,the option for an initial energy density from vector
-  fsmilne.initialize_from_vector(init_e);
   */
-  //run the freestreaming evolution
+  
+  //run the evolution
   isotropize.run_ita();
 
   /*

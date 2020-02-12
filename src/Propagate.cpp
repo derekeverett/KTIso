@@ -58,7 +58,8 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
 
         for (int ivz = 0; ivz < nvz; ivz++)
         {
-          float vz = -1.0 + (float)ivz * dvz_2;
+          //float vz = -1.0 + (float)ivz * dvz_2;
+          float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
           float thetap = acos(vz);
           float sin_thetap = sin(thetap);
           float vx = sin_thetap * cos(phip);
@@ -124,7 +125,8 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
 
         for (int ivz = 0; ivz < nvz; ivz++)
         {
-          float vz = -1.0 + (float)ivz * dvz_2;
+          //float vz = -1.0 + (float)ivz * dvz_2;
+          float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
           float thetap = acos(vz);
           float sin_thetap = sin(thetap);
           //float vx = sin_thetap * cos(phip);
@@ -177,7 +179,8 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
     {
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         //float vz = vz_quad[ivz][0];
         //float dvz = vz_quad[ivz][1];
 
@@ -239,7 +242,8 @@ void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, floa
     {
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        float vz = -1.0 + (float)ivz * dvz_2;
+        //float vz = -1.0 + (float)ivz * dvz_2;
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         //float vz = vz_quad[ivz][0];
 
         int ivz_l = ivz - 1;
