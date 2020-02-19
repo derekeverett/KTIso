@@ -465,6 +465,8 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        //for special case when we assume dist function ~ delta(v_z)
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) / 2.0;
         float nu = udotv / tau_iso;
 
         if (nu * dt > 0.2) printf("Warning: nu * dt = %f > 0.2, energy density = %f , take smaller dt! \n", nu * dt, eps);

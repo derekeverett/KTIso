@@ -252,7 +252,7 @@ void initializeGauss(float *density, float b, parameters params) // b is the var
 
 void initializeEllipticalGauss(float *density, float bx, float by, parameters params) // bx is the x variance etc...
 {
-  float regulate = 1.0e-10;
+  float regulate = 1.0e-20;
   int ntot = params.ntot;
   int nx = params.nx;
   int ny = params.ny;
@@ -270,7 +270,7 @@ void initializeEllipticalGauss(float *density, float bx, float by, parameters pa
     float x = (float)ix * dx  - ((float)(nx-1)) / 2.0 * dx;
     float y = (float)iy * dy  - ((float)(ny-1)) / 2.0 * dy;
 
-    density[is] = e0 * exp(-(3.0 / (8.0 * bx * bx)) * (x * x)) * exp(-(3.0 / (8.0 * by * by)) * (y * y)) + regulate;
+    density[is] = e0 * exp(-(1.0 / (2.0 * bx * bx)) * (x * x)) * exp(-(1.0 / (2.0 * by * by)) * (y * y)) + regulate;
   }
 }
 
@@ -541,7 +541,7 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   printf("setting initial conditions on energy density : ");
   if (option == 1)
   {
-    initializeEllipticalGauss(energyDensity, 1.0, 1.0, params);
+    initializeEllipticalGauss(energyDensity, 2.0, 2.0, params);
     printf("Smooth Oblate Gaussian \n");
   }
   else if (option == 2)

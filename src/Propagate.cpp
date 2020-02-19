@@ -88,7 +88,7 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
           /////////////////////////////////////
 
           //update the value of F(x; phip)
-          density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
+          density[is][iphip][ivz] = fmax(F_updated, 1.0e-20);
         }
       } //for (int iphip; iphip < nphip; iphip++)
     } //for (int iy = 0; iy < ny; iy++)
@@ -155,7 +155,7 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
           /////////////////////////////////////
 
           //update the value of F(x; phip)
-          density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
+          density[is][iphip][ivz] = fmax(F_updated, 1.0e-20);
         }
       } //for (int iphip; iphip < nphip; iphip++)
     } //for (int iy = 2; iy < ny - 2; iy++)
@@ -217,7 +217,7 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
         /////////////////////////////////////
 
         //update the value of F(x; phip)
-        density[is][iphip][ivz] = fmax(F_updated, 1.0e-10);
+        density[is][iphip][ivz] = fmax(F_updated, 1.0e-20);
 
       }
     } //for (int iphip; iphip < nphip; iphip++)

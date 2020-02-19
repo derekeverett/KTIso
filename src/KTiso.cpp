@@ -456,7 +456,7 @@ public:
           for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
           //totalEnergy *= (params.dx * params.dy * t);
           totalEnergy *= (params.dx * params.dy);
-
+          printf("Total energy left at midrap : %f \n", totalEnergy);
           //total energy left at midrapidity considering longitudinal work
           float totalEnergyMid = totalEnergy + total_work;
           printf("Total work done by long. pressure : %f \n", total_work);

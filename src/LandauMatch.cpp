@@ -31,7 +31,7 @@ void calculateHypertrigTable(float ***hypertrigTable, float **vz_quad, parameter
       //if (nvz == 1) vz = 0.0;
 
       float thetap = acos(vz);
-      float sin_thetap = sin(thetap);
+      float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
       float vx = sin_thetap * cos(phip);
       float vy = sin_thetap * sin(phip);
 
