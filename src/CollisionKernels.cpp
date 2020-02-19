@@ -54,7 +54,7 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
         //float vz = -1.0 + (float)ivz * dvz_2;
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
-        float sin_thetap = sin(thetap);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
         float vx = sin_thetap * cos(phip);
         float vy = sin_thetap * sin(phip);
 
@@ -63,6 +63,7 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
         float delta_F = F - F_iso;
         float coll = -1.0 * delta_F * udotv / tau_iso; //the collision term C[F]
 
@@ -117,7 +118,7 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
         //float vz = -1.0 + (float)ivz * dvz_2;
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
-        float sin_thetap = sin(thetap);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
         float vx = sin_thetap * cos(phip);
         float vy = sin_thetap * sin(phip);
 
@@ -126,6 +127,7 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
         float delta_F = F - F_iso;
         float coll = -1.0 * delta_F * udotv / tau_iso; //the collision term C[F]
 
@@ -213,13 +215,14 @@ void propagateITACollRK4(float ***density, float ***density_i4, float ***density
         //float vz = -1.0 + (float)ivz * dvz_2;
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
-        float sin_thetap = sin(thetap);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
         float vx = sin_thetap * cos(phip);
         float vy = sin_thetap * sin(phip);
 
         //collision term
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
 
         float F_1 = density_p[is][iphip][ivz];
         float F_2 = density_i2[is][iphip][ivz];
@@ -254,8 +257,6 @@ void propagateToyColl(float ***density, float ***density_p, parameters params)
   int nphip = params.nphip;
   float eta_over_s = params.eta_over_s;
   int nvz = params.nvz;
-  //float dvz = 2.0 / (nvz - 1);
-  //float dvz_2 = 2.0 / (float)(nvz - 1);
 
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
@@ -346,8 +347,6 @@ void propagateRelaxMethodColl2(float ***density, float ***density_p, float *ener
     float T = temperatureFromEnergyDensity(eps);
     float k = dt * T / (5. * eta_over_s);
 
-    //if ( (1.0 / alpha / T) < 5.0 * dt) std::cout << "take smaller dt! " << std::endl;
-
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
@@ -356,10 +355,9 @@ void propagateRelaxMethodColl2(float ***density, float ***density_p, float *ener
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        //float vz = -1.0 + (float)ivz * dvz_2;
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
-        float sin_thetap = sin(thetap);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
         float vx = sin_thetap * cos(phip);
         float vy = sin_thetap * sin(phip);
 
@@ -448,15 +446,12 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
     for (int iphip = 0; iphip < nphip; iphip++)
     {
       float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      //float vx = cos(phip);
-      //float vy = sin(phip);
 
       for (int ivz = 0; ivz < nvz; ivz++)
       {
-        //float vz = -1.0 + (float)ivz * dvz_2;
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         float thetap = acos(vz);
-        float sin_thetap = sin(thetap);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
         float vx = sin_thetap * cos(phip);
         float vy = sin_thetap * sin(phip);
 
@@ -466,7 +461,7 @@ void propagateITACollExact(float ***density, float ***density_p, float *energyDe
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
         //for special case when we assume dist function ~ delta(v_z)
-        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) / 2.0;
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
         float nu = udotv / tau_iso;
 
         if (nu * dt > 0.2) printf("Warning: nu * dt = %f > 0.2, energy density = %f , take smaller dt! \n", nu * dt, eps);

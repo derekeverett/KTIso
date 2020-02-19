@@ -361,6 +361,7 @@ public:
 
         //this propagates ITA eqns of motion terms corresponding to freestreaming
         propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
+        updateDensity(density, density_p, params);
 
         if (params.collisions)
         {
@@ -412,7 +413,6 @@ public:
           propagateITACollExact(density, density_p, energyDensity, flowVelocity, dt, params);
 
           propagateBoundaries(density, params);
-
           updateDensity(density, density_p, params);
 
         } // if (params.collisions)

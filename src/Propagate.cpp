@@ -61,7 +61,7 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
           //float vz = -1.0 + (float)ivz * dvz_2;
           float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
           float thetap = acos(vz);
-          float sin_thetap = sin(thetap);
+          float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
           float vx = sin_thetap * cos(phip);
           //float vy = sin_thetap * sin(phip);
 
@@ -128,7 +128,7 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
           //float vz = -1.0 + (float)ivz * dvz_2;
           float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
           float thetap = acos(vz);
-          float sin_thetap = sin(thetap);
+          float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
           //float vx = sin_thetap * cos(phip);
           float vy = sin_thetap * sin(phip);
 
