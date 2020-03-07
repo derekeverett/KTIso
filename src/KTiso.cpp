@@ -369,48 +369,14 @@ public:
           calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
           solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
-          //find the isotropic distribution F_iso satisfying total energy conservation
-          //calculateF_iso(F_iso, density_p, flowVelocity);
-
-          //RK METHODS
-
-          //RK2
-          //guess step to estimate the collision term at C[F(t + dt/2)]
-          //propagateITAColl(density_i, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-          //propagateBoundaries(density_i, params);
-          //now propagate using the estimated C[F(t + dt/2)]
-          //propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
-          //propagateBoundaries(density, params);
-
-          //RK4
-          /*
-          propagateITAColl(density_i2, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-          propagateBoundaries(density_i2, params);
-
-          propagateITACollConvexComb(density_i3, density_i2, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-          propagateBoundaries(density_i3, params);
-
-          propagateITACollConvexComb(density_i4, density_i3, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-          propagateBoundaries(density_i4, params);
-
-          propagateITACollRK4(density, density_i4, density_i3, density_i2, density_p, energyDensity, flowVelocity, dt, params);
-          propagateBoundaries(density, params);
-          */
-
-          //RELAXATION TYPE METHODS
-          //propagateRelaxMethodColl(density, density_p, energyDensity, dt, params);
-          //propagateRelaxMethodCollLRF(density, density_p, energyDensity, flowVelocity, dt, params);
-          //propagateRelaxMethodColl2(density, density_p, energyDensity, flowVelocity, dt, params);
-
-          //METHODS USING EXACT SOLUTION of d/dt F = nu (F_iso - F)
-          //try a guess-corrector method
-          //propagate F forward by dt/2
-          //propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-          // find epsilon and u^mu at t + dt/2
-          //calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t + dt/2.0, params);
-          //solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-          //use guess of epsilon and u at t + dt/2 to propagate F to t+dt
-          propagateITACollExact(density, density_p, energyDensity, flowVelocity, dt, params);
+          //RK2 w/ exact formula
+          //get estimate F(t + dt/2)
+          propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt/2., params);
+          //now evaluate the thermodynamic variables at t+dt/2
+          calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params);
+          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+          //now propagate by dt using estimated slope
+          propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
 
           propagateBoundaries(density, params);
           updateDensity(density, density_p, params);

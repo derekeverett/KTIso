@@ -78,7 +78,8 @@ void propagateITAColl(float ***density, float ***density_p, float *energyDensity
 
 
 //this uses forward Euler step. When combined with kernel above, together can be used as RK2 forward step
-void propagateITACollConvexComb(float ***density, float ***density_i, float ***density_p, float *energyDensity, float **flowVelocity, float dt, parameters params)
+void propagateITACollConvexComb(float ***density, float ***density_i, float ***density_p, float *energyDensity,
+  float **flowVelocity, float dt, parameters params)
 {
   int ntot = params.ntot;
   int nphip = params.nphip;
@@ -128,11 +129,18 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
         float udotv = u0 - ux*vx - uy*vy;
         float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
         if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
-        float delta_F = F - F_iso;
-        float coll = -1.0 * delta_F * udotv / tau_iso; //the collision term C[F]
+        //float delta_F = F - F_iso;
+        //float coll = -1.0 * delta_F * udotv / tau_iso; //the collision term C[F]
 
         //update the value of F(x; phip)
-        density[is][iphip][ivz] = density_p[is][iphip][ivz] + (coll * dt);
+        //density[is][iphip][ivz] = density_p[is][iphip][ivz] + (coll * dt);
+
+        //using exact solution 
+        float nu = udotv / tau_iso;
+        if (nu * dt > 0.2) printf("Warning: nu * dt = %f > 0.2, energy density = %f , take smaller dt! \n", nu * dt, eps);
+        float exp_weight = exp(-1.0 * nu * dt);
+        //update the value of F(x; phip)
+        density[is][iphip][ivz] = exp_weight * density_p[is][iphip][ivz] + (1.0 - exp_weight) * F_iso;
 
         //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
       } //for (int ivz = 0; ivz < nvz; ivz++)
