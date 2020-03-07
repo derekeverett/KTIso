@@ -17,6 +17,7 @@ struct parameters
   float e_sw;
   float eta_over_s;
   int collisions;
+  int sources;
   //these are computed based on the chosen parameters above; they are constrained
   int ntot;
   //float TAU;

@@ -201,6 +201,8 @@ void readInParameters(struct parameters &params)
     params.eta_over_s = dummyFloat;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.collisions = dummyInt;
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.sources = dummyInt;
 
     fclose(fileIn);
   }

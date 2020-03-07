@@ -151,6 +151,7 @@ public:
       params.e_sw = 1.7;
       params.eta_over_s = 10.0;
       params.collisions = 1;
+      params.sources = 0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -383,9 +384,10 @@ public:
 
         } // if (params.collisions)
 
-
-        //this propagates ITA eqns of motion terms corresponding to physical energy-momentum deposition (Jets)
-        //propagateJetSource(density, density_p, jetSource, energyDensity, flowVelocity, vz_quad, t, params);
+        //this propagates ITA eqns of motion terms corresponding to physical energy-momentum source
+        //the jetSource should be defined to be the moment F of the jet Particles which are being deposited
+        // F = /int dp p^3 f(x;p) , a function of space (x,y) and momentum angles
+        //if (params.sources) propagateJetSource(density, density_p, jetSource, energyDensity, flowVelocity, vz_quad, t, params);
 
         //calculate the ten independent components of the stress tensor by integrating over phi_p and vz
         calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
