@@ -142,11 +142,11 @@ public:
       params.nx = 101;
       params.ny = 101;
       params.nphip = 200;
-      params.nt = 100;
       params.dx = 0.1;
       params.dy = 0.1;
       params.dt = 0.05;
-      params.t0 = 0.1;
+      params.t0 = 0.0;
+      params.tf = 1.0;
       params.eos_type = 1;
       params.e_sw = 1.7;
       params.eta_over_s = 10.0;
@@ -157,18 +157,19 @@ public:
       //define some useful combinations
       params.ntot = params.nx * params.ny;
       int ntot = params.ntot;
-      int nt = params.nt;
       int nvz = params.nvz;
       int collisions = params.collisions;
       float t0 = params.t0;
+      float tf = params.tf;
       float dt = params.dt;
-      float tf = t0 + (float)nt * dt;
+      float dx = params.dx;
+      int adapt_time = params.adapt_time;
 
       printf("Parameters are ...\n");
       printf("(nx, ny, nphip, nvz) = (%d, %d, %d, %d)\n", params.nx, params.ny, params.nphip, params.nvz);
       printf("(dx, dy, dt) = (%.2f fm, %.2f fm, %.2f fm/c)\n", params.dx, params.dy, params.dt);
       printf("t0 = %.2f fm/c\n", params.t0);
-      printf("nt = %d \n", params.nt);
+      printf("tf = %.2f fm/c\n", params.tf);
       printf("e_sw = %.3f GeV / fm^3 \n", params.e_sw);
 
       if (collisions)
@@ -178,6 +179,7 @@ public:
       }
       else printf("Evolving by freestreaming (no collisions) \n");
 
+      if (adapt_time) printf("Evolving using adaptive time step \n");
 
       if (params.eos_type == 1) printf("Using EoS : Conformal \n");
       else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");
@@ -199,6 +201,9 @@ public:
       //a table containing 10 rows for 10 independent combinations of p_(mu)p_(nu)
       float ***hypertrigTable = NULL;
       hypertrigTable = calloc3dArrayf(hypertrigTable, 10, params.nphip, params.nvz);
+      //the isotropization time (keep track for adaptive time steps )
+      float *isotropizationTime = NULL;
+      isotropizationTime = (float *)calloc(params.ntot, sizeof(float));
 
       //the table containing roots and weights for quadrature in v_z
       float **vz_quad = NULL;
@@ -240,7 +245,7 @@ public:
         vz_quad[ivz][1] = dvz_cub;
       }
 
-      //the density F()
+      //the moment F()
       float ***density = NULL;
       density = calloc3dArrayf(density, params.ntot, params.nphip, params.nvz); // function of x,y,eta and rapidity
 
@@ -248,7 +253,7 @@ public:
       //float ***dvz_table = NULL;
       //dvz_table = calloc3dArrayf(dvz_table, params.ntot, params.nphip, params.nvz);
 
-      //the previous value of the density F()
+      //the previous value of the moment F()
       float ***density_p = NULL;
       density_p = calloc3dArrayf(density_p, params.ntot, params.nphip, params.nvz);
 
@@ -256,26 +261,6 @@ public:
       float ***density_i = NULL;
       density_i = calloc3dArrayf(density_i, params.ntot, params.nphip, params.nvz);
 
-      float ***density_i2 = NULL;
-      density_i2 = calloc3dArrayf(density_i2, params.ntot, params.nphip, params.nvz);
-
-      float ***density_i3 = NULL;
-      density_i3 = calloc3dArrayf(density_i3, params.ntot, params.nphip, params.nvz);
-
-      float ***density_i4 = NULL;
-      density_i4 = calloc3dArrayf(density_i4, params.ntot, params.nphip, params.nvz);
-
-      //the integral of  1 / (udotv)^2 / (solid angle); this should be one if energy matching is satisfied numerically
-      float *energyMatchIntegral = NULL;
-      energyMatchIntegral = (float *)calloc(params.ntot, sizeof(float));
-
-      // u^2 must be 1 numerically
-      float *unorm = NULL;
-      unorm = (float *)calloc(params.ntot, sizeof(float));
-
-      //the isotropic (IN LRF!) distribution F_iso
-      //float ***F_iso = NULL;
-      //F_iso = calloc3dArrayf(F_iso, params.ntot, params.nphip, params.nvz);
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -343,18 +328,28 @@ public:
       */
       //FREEZEOUT
 
-      //write to file every write_freq steps
-      int write_freq = 1;
 
-      //the index in grid center
-      int icenter = ntot / 2;
-
+      int write_freq = 1; //write to file every write_freq steps
+      int icenter = ntot / 2; //the index in grid center
       float total_work = 0.0; //total work done by longitudinal pressure
 
+      float tau_iso_min = 5 * dt; //smallest value of tau_iso across grid, initialize using initial time step
+
       //MAIN TIME STEP LOOP
-      for (int it = 1; it < nt + 1; it++)
+      float t = t0;
+      int it = 0;
+
+      //for (int it = 1; it < nt + 1; it++)
+      while (t < tf)
       {
-        float t = t0 + it * dt;
+        //*NOTE the time step needs to be much smaller than dx for the maccormack
+        //scheme to propagate the streaming terms,
+        //AND much smaller than the isotropization time to propagate the collision term.
+        if (adapt_time) dt = std::min(dx / 8., tau_iso_min / 8.);
+
+        if (tf - t < dt) dt = tf - t; //we want to match at the desired tf matching time 
+        t += dt;
+        it += 1;
 
         //calculate the amount of work done by longitudinal pressure
         float work = calculateLongitudinalWork(stressTensor, t-dt, dt, params);
@@ -381,6 +376,11 @@ public:
 
           propagateBoundaries(density, params);
           updateDensity(density, density_p, params);
+
+          //find the smallest isotropization time on grid
+          tau_iso_min = calculateTauIsoMin(energyDensity, params);
+          printf("min. tau_iso on grid : %f fm/c\n", tau_iso_min);
+
 
         } // if (params.collisions)
 
@@ -417,8 +417,8 @@ public:
           float eps = energyDensity[icenter];
           float T = temperatureFromEnergyDensity(eps);
           float tau_iso = 5. * params.eta_over_s / T;
-          printf("Step %d of %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
-                  it, nt, t, eps * hbarc, T, tau_iso);
+          printf("Step %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
+                  it, t, eps * hbarc, T, tau_iso);
 
           float totalEnergy = 0.0;
           for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];

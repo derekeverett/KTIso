@@ -183,8 +183,8 @@ void readInParameters(struct parameters &params)
     params.nphip = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.nvz = dummyInt;
-    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.nt = dummyInt;
+    //fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    //params.nt = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.dx = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
@@ -193,6 +193,8 @@ void readInParameters(struct parameters &params)
     params.dt = dummyFloat;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.t0 = dummyFloat;
+    fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
+    params.tf = dummyFloat;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.eos_type = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
@@ -203,6 +205,8 @@ void readInParameters(struct parameters &params)
     params.collisions = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.sources = dummyInt;
+    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    params.adapt_time = dummyInt;
 
     fclose(fileIn);
   }

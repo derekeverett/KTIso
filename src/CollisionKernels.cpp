@@ -135,7 +135,7 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
         //update the value of F(x; phip)
         //density[is][iphip][ivz] = density_p[is][iphip][ivz] + (coll * dt);
 
-        //using exact solution 
+        //using exact solution
         float nu = udotv / tau_iso;
         if (nu * dt > 0.2) printf("Warning: nu * dt = %f > 0.2, energy density = %f , take smaller dt! \n", nu * dt, eps);
         float exp_weight = exp(-1.0 * nu * dt);
@@ -632,4 +632,27 @@ void propagateRelaxMethodCollLRF(float ***density, float ***density_p, float *en
     gsl_spline_free(F_spline_phip);
     gsl_interp_accel_free(acc);
   } //for (int is = 0; is < ntot; is++)
+}
+
+float calculateTauIsoMin(float *energyDensity, parameters params)
+{
+  int ntot = params.ntot;
+  float eta_over_s = params.eta_over_s;
+
+  float tau_iso_ctr = 5. * eta_over_s / (temperatureFromEnergyDensity(energyDensity[ (ntot - 1) / 2]) );
+
+  float tau_iso_min = tau_iso_ctr;
+
+  #pragma omp parallel for
+  for (int is = 0; is < ntot; is++)
+  {
+    float eps = energyDensity[is];
+    float T = temperatureFromEnergyDensity(eps);
+    float tau_iso = 5. * eta_over_s / T;
+
+    tau_iso_min = std::min(tau_iso_min, tau_iso);
+  }
+
+  return tau_iso_min;
+
 }
