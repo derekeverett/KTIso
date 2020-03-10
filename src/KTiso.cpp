@@ -141,7 +141,7 @@ public:
       params.ic_energy = 5;
       params.nx = 101;
       params.ny = 101;
-      params.nphip = 200;
+      params.nphip = 100;
       params.dx = 0.1;
       params.dy = 0.1;
       params.dt = 0.05;
@@ -164,6 +164,11 @@ public:
       float dt = params.dt;
       float dx = params.dx;
       int adapt_time = params.adapt_time;
+
+      //now reset the number of points in phip based on total evolution time, using arc-length
+      float min_dx_dy = min(params.dx, params.dy);
+      int nphip = int( ceil( (2.0 * M_PI * tf) / min_dx_dy ) );
+      params.nphip = max(100, nphip);
 
       printf("Parameters are ...\n");
       printf("(nx, ny, nphip, nvz) = (%d, %d, %d, %d)\n", params.nx, params.ny, params.nphip, params.nvz);
@@ -333,7 +338,7 @@ public:
       int icenter = ntot / 2; //the index in grid center
       float total_work = 0.0; //total work done by longitudinal pressure
 
-      float tau_iso_min = 5 * dt; //smallest value of tau_iso across grid, initialize using initial time step
+      float tau_iso_min = 8. * dt; //smallest value of tau_iso across grid, initialize using initial time step
 
       //MAIN TIME STEP LOOP
       float t = t0;
@@ -345,9 +350,9 @@ public:
         //*NOTE the time step needs to be much smaller than dx for the maccormack
         //scheme to propagate the streaming terms,
         //AND much smaller than the isotropization time to propagate the collision term.
-        if (adapt_time) dt = std::min(dx / 8., tau_iso_min / 8.);
+        if (adapt_time) dt = std::min(dx / 5., tau_iso_min / 8.);
 
-        if (tf - t < dt) dt = tf - t; //we want to match at the desired tf matching time 
+        if (tf - t < dt) dt = tf - t; //we want to match at the desired tf matching time
         t += dt;
         it += 1;
 

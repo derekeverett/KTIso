@@ -179,8 +179,8 @@ void readInParameters(struct parameters &params)
     params.nx = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.ny = dummyInt;
-    fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
-    params.nphip = dummyInt;
+    //fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
+    //params.nphip = dummyInt;
     fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);
     params.nvz = dummyInt;
     //fscanf(fileIn, "%s\t%d\n", dummyChar, &dummyInt);

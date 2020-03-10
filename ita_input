@@ -3,7 +3,6 @@ ic_energy 1
 ic_flow 1
 nx 201
 ny 201
-nphip 200
 nvz 1
 dx 0.1
 dy 0.1
