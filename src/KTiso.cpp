@@ -36,6 +36,8 @@ public:
   // IS THIS VARIABLE NECESSARY
   int gridSize; //the total number of grid points in x, y, and eta : used for vector memory allocation
 
+  float tau_LandauMatch;
+
   //support to initilialize the energy density from a vector - useful for JETSCAPE
   //note units of argument should be GeV / fm^3
   //then we convert to fm^(-4)
@@ -164,6 +166,9 @@ public:
       float dt = params.dt;
       float dx = params.dx;
       int adapt_time = params.adapt_time;
+
+      //set the value of the Landau matching time stored in class
+      tau_LandauMatch = params.tf;
 
       //now reset the number of points in phip based on total evolution time, using arc-length
       float min_dx_dy = min(params.dx, params.dy);
