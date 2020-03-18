@@ -221,6 +221,13 @@ void solveEigenSystem(float **stressTensor, float *energyDensity, float **flowVe
       flowVelocity[2][is] = 0.0;
       flowVelocity[3][is] = 0.0;
     }
+
+    //free gsl memory
+    gsl_matrix_free(gmunu);
+    gsl_matrix_free(Tmunu);
+    gsl_matrix_complex_free(eigen_vectors);
+    gsl_vector_complex_free(eigen_values);
+    
   } // for (int is; is < ntot; ...)
 } //solveEigenSystem()
 

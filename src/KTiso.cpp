@@ -501,11 +501,6 @@ public:
       calculateShearInvReynolds(energyDensity, pressure, shearTensor, R_pimunu_Inv, params);
       writeScalarToFileProjection(R_Pi_Inv, (char *)"R_Pi_Inv_projection", params);
       writeScalarToFileProjection(R_pimunu_Inv, (char *)"R_pimunu_Inv_projection", params);
-      //int ctr = (ny * ntot_ETA * ((nx - 1) / 2)) + (ntot_ETA * ((ny - 1) / 2)) + ((ntot_ETA - 1) / 2);
-      //printf("R_Pi_Inv at center : %f \n", R_Pi_Inv[ctr]);
-      //printf("R_pimunu_Inv at center : %f \n", R_pimunu_Inv[ctr]);
-      free(R_Pi_Inv);
-      free(R_pimunu_Inv);
       //////////////////////////////////HYDRO VALIDITY//////////////////////////////////
 
 
@@ -598,9 +593,21 @@ public:
       free2dArrayf(stressTensor, 10);
       free(energyDensity);
       free2dArrayf(flowVelocity, 4);
+      free3dArrayf(hypertrigTable, 10, params.nphip);
+      free(isotropizationTime);
+      free2dArrayf(vz_quad, params.nvz);
+
+      free3dArrayf(density, params.ntot, params.nphip);
+      free3dArrayf(density_p, params.ntot, params.nphip);
+      free3dArrayf(density_i, params.ntot, params.nphip);
+
+      free2dArrayf(F_vz_phip, params.nvz);
+
       free(pressure);
       free(bulkPressure);
       free2dArrayf(shearTensor, 10);
+      free(R_Pi_Inv);
+      free(R_pimunu_Inv);
 
       printf("Done... Goodbye!\n");
       return 1;
