@@ -153,7 +153,9 @@ public:
       params.e_sw = 1.7;
       params.eta_over_s = 10.0;
       params.collisions = 1;
+      params.adapt_time = 1;
       params.sources = 0;
+      params.angular_acc_factor = 1.0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -166,6 +168,7 @@ public:
       float dt = params.dt;
       float dx = params.dx;
       int adapt_time = params.adapt_time;
+      float angular_acc_factor = params.angular_acc_factor;
 
       //set the value of the Landau matching time stored in class
       tau_LandauMatch = params.tf;
@@ -173,6 +176,8 @@ public:
       //now reset the number of points in phip based on total evolution time, using arc-length
       float min_dx_dy = min(params.dx, params.dy);
       int nphip = int( ceil( (2.0 * M_PI * tf) / min_dx_dy ) );
+      nphip *= angular_acc_factor; //multiply by angular accuracy factor to increase accuracy
+      nphip = round(nphip / 2) * 2; //get nearest even integer
       params.nphip = max(100, nphip);
 
       printf("Parameters are ...\n");

@@ -20,6 +20,7 @@ struct parameters
   int collisions;
   int sources;
   int adapt_time;
+  float angular_acc_factor;
   //these are computed based on the chosen parameters above; they are constrained
   int ntot;
   //float TAU;

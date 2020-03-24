@@ -6,7 +6,7 @@ ny 201
 nvz 1
 dx 0.1
 dy 0.1
-dt 0.0125
+dt 0.001
 t0 0.0
 tf 1.0
 eos_type 1
@@ -15,3 +15,4 @@ eta_over_s 0.5
 collisions 1
 sources 0
 adapt_time 1
+angular_acc_factor 4.0
