@@ -156,6 +156,8 @@ public:
       params.adapt_time = 1;
       params.sources = 0;
       params.angular_acc_factor = 1.0;
+      params.fs_acc_factor = 5.0;
+      params.coll_acc_factor = 8.0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -169,6 +171,8 @@ public:
       float dx = params.dx;
       int adapt_time = params.adapt_time;
       float angular_acc_factor = params.angular_acc_factor;
+      float fs_acc_factor = params.fs_acc_factor;
+      float coll_acc_factor = params.coll_acc_factor;
 
       //set the value of the Landau matching time stored in class
       tau_LandauMatch = params.tf;
@@ -194,7 +198,12 @@ public:
       }
       else printf("Evolving by freestreaming (no collisions) \n");
 
-      if (adapt_time) printf("Evolving using adaptive time step \n");
+      if (adapt_time)
+      {
+        printf("Evolving using adaptive time step \n");
+        printf("Time step accuracy factor FS terms : %.2f \n", fs_acc_factor);
+        printf("Time step accuracy factor Collision terms : %.2f \n", coll_acc_factor);
+      }
 
       if (params.eos_type == 1) printf("Using EoS : Conformal \n");
       else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");
@@ -360,7 +369,7 @@ public:
         //*NOTE the time step needs to be much smaller than dx for the maccormack
         //scheme to propagate the streaming terms,
         //AND much smaller than the isotropization time to propagate the collision term.
-        if (adapt_time) dt = std::min(dx / 5., tau_iso_min / 8.);
+        if (adapt_time) dt = std::min(dx / fs_acc_factor, tau_iso_min / coll_acc_factor);
 
         if (tf - t < dt) dt = tf - t; //we want to match at the desired tf matching time
         t += dt;

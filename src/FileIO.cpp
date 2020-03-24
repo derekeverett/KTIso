@@ -209,6 +209,10 @@ void readInParameters(struct parameters &params)
     params.adapt_time = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.angular_acc_factor = dummyFloat;
+    fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
+    params.fs_acc_factor = dummyFloat;
+    fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
+    params.coll_acc_factor = dummyFloat;
 
     fclose(fileIn);
   }
