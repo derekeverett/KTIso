@@ -26,4 +26,7 @@ struct parameters
   //these are computed based on the chosen parameters above; they are constrained
   int ntot;
   //float TAU;
+
+  //useful constants
+  float hbarc;
 };

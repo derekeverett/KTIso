@@ -69,20 +69,26 @@ void calculatePressure(float *energyDensity, float *pressure, parameters params)
   }
 }
 
-//the conformal EoS
+//the conformal EoS in natural units
 float temperatureFromEnergyDensity(float eps)
 {
   // EoS : eps = a T^4
-  // tau_iso = 5 eta / (s T)
   //float a = 15.6269; // Nc=3, Nf=3
   float a = 13.8997; // Nc=3, Nf=2.5
-
-  //TEMPORARY
-  //a = 1.0;
-  //TEMPORARY
-
   float T = powf( (eps/a), 0.25);
 
   return T;
+
+}
+
+//the conformal EoS in natural units
+float energyDensityFromTemperature(float T)
+{
+  // EoS : eps = a T^4
+  //float a = 15.6269; // Nc=3, Nf=3
+  float a = 13.8997; // Nc=3, Nf=2.5
+  float e = a * powf(T, 4.0);
+
+  return e;
 
 }

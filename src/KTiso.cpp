@@ -138,6 +138,10 @@ public:
       printf("Welcome to ITA\n");
       //declare parameter struct
       struct parameters params;
+
+      //set constants
+      params.hbarc = 0.197326938;
+
       //set default parameters in case of missing ita_input file
       params.output_format = 2;
       params.ic_energy = 5;
@@ -209,7 +213,7 @@ public:
       else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");
       else { printf("Not a valid EoS! \n"); exit(-1); }
 
-      const double hbarc = 0.197326938;
+      float hbarc = params.hbarc;
 
       //allocate and initialize memory
       printf("Allocating memory\n");
@@ -315,7 +319,7 @@ public:
       float totalEnergy = 0.0;
       for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
       //totalEnergy *= (params.dx * params.dy * t0);
-      totalEnergy *= (params.dx * params.dy);
+      totalEnergy *= (params.dx * params.dy * t0);
       printf("Total energy before evolution : %f \n", totalEnergy);
 
       //useful for plotting the momentum dependence of distribution function
@@ -379,6 +383,10 @@ public:
         float work = calculateLongitudinalWork(stressTensor, t-dt, dt, params);
         total_work += work;
 
+        //this propagates eqns of motion according to Bjorken expansion term (exact solution tau * F = const )
+        propagateBjorkenExpansion(density, density_p, t, dt, params);
+        updateDensity(density, density_p, params);
+
         //this propagates ITA eqns of motion terms corresponding to freestreaming
         propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
         updateDensity(density, density_p, params);
@@ -439,20 +447,26 @@ public:
         if (it % write_freq == 0)
         {
           float eps = energyDensity[icenter];
+          float eps_GeV = eps * hbarc;
           float T = temperatureFromEnergyDensity(eps);
+          float T_GeV = T * hbarc;
           float tau_iso = 5. * params.eta_over_s / T;
-          printf("Step %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f fm^-1, tau_iso = %.3f fm/c \n",
-                  it, t, eps * hbarc, T, tau_iso);
+          printf("Step %d : t = %.3f : e = %.3f GeV/fm^3, T = %.3f GeV, tau_iso = %.3f fm/c \n",
+                  it, t, eps_GeV, T_GeV, tau_iso);
 
           float totalEnergy = 0.0;
           for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
           //totalEnergy *= (params.dx * params.dy * t);
-          totalEnergy *= (params.dx * params.dy);
-          printf("Total energy left at midrap : %f \n", totalEnergy);
+          totalEnergy *= (params.dx * params.dy * t);
+          printf("Total energy left at midrap : %f \n\n", totalEnergy);
           //total energy left at midrapidity considering longitudinal work
           float totalEnergyMid = totalEnergy + total_work;
-          printf("Total work done by long. pressure : %f \n", total_work);
-          printf("Total energy left at midrap + total long. work : %f \n", totalEnergy);
+
+          if (nvz > 1)
+          {
+            printf("Total work done by long. pressure : %f \n", total_work);
+            printf("Total energy left at midrap + total long. work : %f \n", totalEnergy);
+          }
 
           char e_file[255] = "";
           char t00_file[255] = "";
@@ -488,7 +502,7 @@ public:
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.ntot; is++) totalEnergyAfter += stressTensor[0][is];
       //totalEnergyAfter *= (params.dx * params.dy * tf);
-      totalEnergyAfter *= (params.dx * params.dy);
+      totalEnergyAfter *= (params.dx * params.dy * t);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 
       //check which fraction of total energy lies within freezeout surface, which lies in 'corona'

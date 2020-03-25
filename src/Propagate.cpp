@@ -29,6 +29,45 @@ void updateDensity(float ***density, float ***density_p, parameters params)
     } //for (int iphip = 0; iphip < params.nphip; iphip++)
   } //for (int is = 0; is < params.ntot; is++)
 }
+
+void propagateBjorkenExpansion(float ***density, float ***density_p, float t, float dt, parameters params)
+{
+  int nx = params.nx;
+  int ny = params.ny;
+  int nphip = params.nphip;
+  int nvz = params.nvz;
+
+  //previous value of time
+  float t_p = t - dt;
+
+  //using is = ny * ix + iy
+  int x_stride = ny;
+
+  //update the density moment F based on ITA Eqns of Motion
+  #pragma omp parallel for
+  for (int ix = 2; ix < nx - 2; ix++)
+  {
+    for (int iy = 2; iy < ny - 2; iy++)
+    {
+      int is = (ny * ix) + iy;
+      int is_r = is + x_stride;
+      int is_l = is - x_stride;
+
+      for (int iphip = 0; iphip < nphip; iphip++)
+      {
+        for (int ivz = 0; ivz < nvz; ivz++)
+        {
+          float F = density_p[is][iphip][ivz];
+          //update the value of F(x; phip) using exact solution to eqn dF/dt = -F/t (t*F = const)
+          density[is][iphip][ivz] = (t_p / t) * F;
+        }
+      } //for (int iphip; iphip < nphip; iphip++)
+    } //for (int iy = 0; iy < ny; iy++)
+  } //for (int ix = 0; ix < nx; ix++)
+
+}
+
+
 void propagateX(float ***density, float ***density_p, float dt, parameters params)
 {
   int nx = params.nx;

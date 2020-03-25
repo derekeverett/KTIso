@@ -252,6 +252,7 @@ void initializeGauss(float *density, float b, parameters params) // b is the var
 
 void initializeEllipticalGauss(float *density, float bx, float by, parameters params) // bx is the x variance etc...
 {
+  float hbarc = params.hbarc;
   float regulate = 1.0e-20;
   int ntot = params.ntot;
   int nx = params.nx;
@@ -259,7 +260,9 @@ void initializeEllipticalGauss(float *density, float bx, float by, parameters pa
   float dx = params.dx;
   float dy = params.dy;
 
-  float e0 = 500.0; //energy norm factor in fm^(-4) : roughly 500 MeV Temperature
+  float T0_GeV = 0.8; //initial tempeature in GeV
+  float T0 = T0_GeV / hbarc; //initial temperature in fm^-1
+  float e0 = energyDensityFromTemperature(T0);
 
   for (int is = 0; is < ntot; is++)
   {
@@ -530,7 +533,7 @@ void initializeHomogeneous(float *density, parameters params) // bx is the x var
 
 int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy_density, parameters params)
 {
-  float hbarc = 0.197326938;
+  float hbarc = params.hbarc;
 
   //initialize energy density
   //define a lower bound on energy density for all cells to regulate numerical noise in flow velocity in dilute regions
@@ -546,7 +549,7 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   }
   else if (option == 2)
   {
-    initializeEllipticalMCGauss(energyDensity, 0.5, 1.0,params);
+    initializeEllipticalMCGauss(energyDensity, 0.5, 1.0, params);
     printf("Fluctuating Oblate Gaussian \n");
   }
   else if (option == 3)
