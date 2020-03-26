@@ -504,14 +504,6 @@ void propagateRelaxMethodCollLRF(float ***density, float ***density_p, float *en
     float ux = flowVelocity[1][is];
     float uy = flowVelocity[2][is];
 
-    //TEMPORARY
-    //check that when boost is trivial (LRF = LAB) that energy is conserved
-    //u0 = 1.0;
-    //ux = 0.0;
-    //uy = 0.0;
-
-    //TEMPORARY
-
     float gamma = u0;
     float beta_x = ux / u0;
     float beta_y = uy / u0;

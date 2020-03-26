@@ -388,9 +388,12 @@ public:
         updateDensity(density, density_p, params);
 
         //this propagates ITA eqns of motion terms corresponding to freestreaming
-        propagate(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, params);
+        propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, dt, params);
         updateDensity(density, density_p, params);
 
+        //find the smallest isotropization time on grid
+        tau_iso_min = calculateTauIsoMin(energyDensity, params);
+        printf("min. tau_iso on grid : %f fm/c\n", tau_iso_min);
         if (params.collisions)
         {
           //first find the current energy density and flow after advection updates
@@ -409,11 +412,6 @@ public:
           propagateBoundaries(density, params);
           updateDensity(density, density_p, params);
 
-          //find the smallest isotropization time on grid
-          tau_iso_min = calculateTauIsoMin(energyDensity, params);
-          printf("min. tau_iso on grid : %f fm/c\n", tau_iso_min);
-
-
         } // if (params.collisions)
 
         //this propagates ITA eqns of motion terms corresponding to physical energy-momentum source
@@ -427,19 +425,19 @@ public:
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
         //get momentum dependence at center of grid
-        std::ofstream myfile;
-        char filename[255] = "";
-        sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
-        myfile.open(filename);
-        for (int ivz = 0; ivz < params.nvz; ivz++)
-        {
-          for (int iphip = 0; iphip < params.nphip; iphip++)
-          {
-            myfile << density_p[icenter][iphip][ivz] << " ";
-          }
-          myfile << "\n";
-        }
-        myfile.close();
+        //std::ofstream myfile;
+        //char filename[255] = "";
+        //sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
+        //myfile.open(filename);
+        //for (int ivz = 0; ivz < params.nvz; ivz++)
+        //{
+        //  for (int iphip = 0; iphip < params.nphip; iphip++)
+        //  {
+        //    myfile << density_p[icenter][iphip][ivz] << " ";
+        //  }
+        //  myfile << "\n";
+        //}
+        //myfile.close();
 
         //solve for shear stress also
         //then use CORNELIUS to construct a freezeout surface

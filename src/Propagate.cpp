@@ -206,7 +206,6 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
 {
   int ntot = params.ntot;
   int nphip = params.nphip;
-  //float dt = params.dt;
   int nvz = params.nvz;
   float dvz_2 = 2.0 / (float)(nvz - 1);
 
@@ -269,7 +268,6 @@ void propagateVzGeom(float ***density, float ***density_p, float **vz_quad, floa
 {
   int ntot = params.ntot;
   int nphip = params.nphip;
-  //float dt = params.dt;
   int nvz = params.nvz;
   float dvz_2 = 2.0 / (float)(nvz - 1);
 
@@ -427,13 +425,11 @@ void propagateMomentumSpace(float ***density, float ***density_p, float *energyD
 
 
 //this function propagates coordinate space and momentum space according to freestreaming terms
-void propagate(float ***density, float ***density_p, float ***density_i,
-                float *energyDensity, float **flowVelocity, float **vz_quad, float t, parameters params)
+void propagate(float ***density, float ***density_p,
+                float *energyDensity, float **flowVelocity,
+                float **vz_quad, float t, float dt, parameters params)
 {
   int nvz = params.nvz;
-  //int collisions = params.collisions;
-
-  float dt = params.dt;
   float dt_2 = dt / 2.0;
   //to propagate forward in time, use Strang operator splitting approach to split advection terms in coord space and momentum space
   if (nvz > 1)
@@ -444,6 +440,4 @@ void propagate(float ***density, float ***density_p, float ***density_i,
   }
 
   else propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, dt, params);
-
-  //if (collisions) propagateCollisionTerms(density, density_p, density_i, energyDensity, flowVelocity, vz_quad, t, dt, params);
 }

@@ -381,6 +381,7 @@ void readEnergyDensitySuperMCBlock(float *density, parameters params)
 
 void readEnergyDensityBlock(float *density, parameters params)
 {
+  float e_scale_factor = 10.;
   //float lower_tolerance = 1.0e-3;
   int nx = params.nx;
   int ny = params.ny;
@@ -401,7 +402,7 @@ void readEnergyDensityBlock(float *density, parameters params)
       {
         blockFile >> temp;
         int is = (ny) * ix + iy; //the column packed index spanning x, y
-        density[is] = temp;
+        density[is] = temp * e_scale_factor;
       }
     }
   }
