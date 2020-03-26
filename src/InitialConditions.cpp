@@ -391,6 +391,10 @@ void readEnergyDensityBlock(float *density, parameters params)
   blockFile.open("initial_profiles/e.dat");
   if (blockFile.is_open())
   {
+    //skip the eight line header
+    std::string line;
+    for (int l = 0; l < 8; l++) getline(blockFile, line);
+
     for (int iy = 0; iy < ny; iy++)
     {
       for (int ix = 0; ix < nx; ix++)
