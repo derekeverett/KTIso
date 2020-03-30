@@ -15,7 +15,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <vector>
-//#include <algorithm>
 #include <array>
 
 #ifdef _OPENMP
@@ -33,7 +32,6 @@ public:
 
   int run_ita();
 
-  // IS THIS VARIABLE NECESSARY
   int gridSize; //the total number of grid points in x, y, and eta : used for vector memory allocation
 
   float tau_LandauMatch;
@@ -162,6 +160,7 @@ public:
       params.angular_acc_factor = 1.0;
       params.fs_acc_factor = 5.0;
       params.coll_acc_factor = 8.0;
+      params.coll_RK_order = 4;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -177,6 +176,9 @@ public:
       float angular_acc_factor = params.angular_acc_factor;
       float fs_acc_factor = params.fs_acc_factor;
       float coll_acc_factor = params.coll_acc_factor;
+      int coll_RK_order = params.coll_RK_order;
+
+      //if (coll_RK_order != 2 && coll_RK_order != 4) printf("Not a valid choice for coll_RK_order"); exit(-1);
 
       //set the value of the Landau matching time stored in class
       tau_LandauMatch = params.tf;
@@ -199,6 +201,7 @@ public:
       {
         printf("Evolving with collision term : ");
         printf("eta/s = %.2f \n", params.eta_over_s);
+        printf("Propagating collision term with RK%d \n", coll_RK_order);
       }
       else printf("Evolving by freestreaming (no collisions) \n");
 
@@ -223,6 +226,12 @@ public:
       //the energy density
       float *energyDensity = NULL;
       energyDensity = (float *)calloc(params.ntot, sizeof(float));
+      //the previous energy density
+      float *energyDensity_p = NULL;
+      energyDensity_p = (float *)calloc(params.ntot, sizeof(float));
+      //the energy density created during the collision step
+      float *energyDensityDiffColl = NULL;
+      energyDensityDiffColl = (float *)calloc(params.ntot, sizeof(float));
       //the flow velocity
       float **flowVelocity = NULL;
       flowVelocity = calloc2dArrayf(flowVelocity, 4, params.ntot);
@@ -289,6 +298,22 @@ public:
       float ***density_i = NULL;
       density_i = calloc3dArrayf(density_i, params.ntot, params.nphip, params.nvz);
 
+      //the estimate dF/dt|coll for RK4
+      float ***k1_RK4 = NULL;
+      k1_RK4 = calloc3dArrayf(k1_RK4, params.ntot, params.nphip, params.nvz);
+
+      //the estimate dF/dt|coll for RK4
+      float ***k2_RK4 = NULL;
+      k2_RK4 = calloc3dArrayf(k2_RK4, params.ntot, params.nphip, params.nvz);
+
+      //the estimate dF/dt|coll for RK4
+      float ***k3_RK4 = NULL;
+      k3_RK4 = calloc3dArrayf(k3_RK4, params.ntot, params.nphip, params.nvz);
+
+      //the estimate dF/dt|coll for RK4
+      float ***k4_RK4 = NULL;
+      k4_RK4 = calloc3dArrayf(k4_RK4, params.ntot, params.nphip, params.nvz);
+
 
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
@@ -301,12 +326,6 @@ public:
       //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
       //isotropic initialization in phi_p
       initializeDensity(energyDensity, density_p, vz_quad, params);
-
-      //TEMPORARY
-      //anisotropic (in phi_p) initialization of F
-      //std::cout << "Initializing F with anisotropic dist in phi_p "<< "\n";
-      //initializeDensityAniso(energyDensity, density_p, vz_quad, params);
-      //TEMPORARY
 
       //calculate entries in trig table - time independent in cartesian case
       calculateHypertrigTable(hypertrigTable, vz_quad, params);
@@ -356,7 +375,6 @@ public:
       */
       //FREEZEOUT
 
-
       int write_freq = 1; //write to file every write_freq steps
       int icenter = ntot / 2; //the index in grid center
       float total_work = 0.0; //total work done by longitudinal pressure
@@ -400,17 +418,49 @@ public:
           calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
           solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
-          //RK2 w/ exact formula
-          //get estimate F(t + dt/2)
-          propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt/2., params);
-          //now evaluate the thermodynamic variables at t+dt/2
-          calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params);
-          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-          //now propagate by dt using estimated slope
-          propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
+          if (coll_RK_order == 2)
+          {
+            //RK2 w/ exact formula
+            //get estimate F(t + dt/2)
+            propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt/2., params);
+            //now evaluate the thermodynamic variables at t+dt/2
+            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params);
+            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+            //now propagate by dt using estimated slope
+            propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
+          }
+
+          else if (coll_RK_order == 4)
+          {
+            //RK4 w/ exact formula, assuming energy density and flow do not change!
+            calc_k1_RK4(k1_RK4, density_p, energyDensity, flowVelocity, params); //calculate k1 using current info
+            propagateITACollRK4(density_i, density_p, k1_RK4, dt/2., params); //get prediction of F(t + dt/2)
+            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+            calc_next_k_RK4(k2_RK4, k1_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
+            propagateITACollRK4(density_i, density_p, k2_RK4, dt/2., params); //get prediction of F(t + dt/2)
+            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+            calc_next_k_RK4(k3_RK4, k2_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
+            propagateITACollRK4(density_i, density_p, k3_RK4, dt, params); //get prediction of F(t + dt/2)
+            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+            calc_next_k_RK4(k4_RK4, k3_RK4, density_i, energyDensity, flowVelocity, dt, params);
+
+            propagateCollRK4ConvexComb(density, k1_RK4, k2_RK4, k3_RK4, k4_RK4, density_p, dt, params);
+          }
+
 
           propagateBoundaries(density, params);
           updateDensity(density, density_p, params);
+
+          for (int is = 0; is < ntot; is++) energyDensity_p[is] = energyDensity[is];
+          calculateStressTensor(stressTensor, density, hypertrigTable, vz_quad, t, params);
+          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+          for (int is = 0; is < ntot; is++) energyDensityDiffColl[is] = energyDensity[is] - energyDensity_p[is];
 
         } // if (params.collisions)
 
@@ -470,10 +520,13 @@ public:
           char t00_file[255] = "";
           char ux_file[255] = "";
 	        char un_file[255] = "";
+          char e_diff_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
           sprintf(t00_file, "t00_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
 	        sprintf(un_file, "un_projection_%.3f", t);
+          sprintf(e_diff_file, "e_diff_projection_%.3f", t);
+          writeScalarToFileProjection(energyDensityDiffColl, e_diff_file, params);
           writeScalarToFileProjection(energyDensity, e_file, params);
           writeVectorToFileProjection(stressTensor, t00_file, 0, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
@@ -618,6 +671,8 @@ public:
       //free the memory
       free2dArrayf(stressTensor, 10);
       free(energyDensity);
+      free(energyDensity_p);
+      free(energyDensityDiffColl);
       free2dArrayf(flowVelocity, 4);
       free3dArrayf(hypertrigTable, 10, params.nphip);
       free(isotropizationTime);
@@ -626,6 +681,10 @@ public:
       free3dArrayf(density, params.ntot, params.nphip);
       free3dArrayf(density_p, params.ntot, params.nphip);
       free3dArrayf(density_i, params.ntot, params.nphip);
+      free3dArrayf(k1_RK4, params.ntot, params.nphip);
+      free3dArrayf(k2_RK4, params.ntot, params.nphip);
+      free3dArrayf(k3_RK4, params.ntot, params.nphip);
+      free3dArrayf(k4_RK4, params.ntot, params.nphip);
 
       free2dArrayf(F_vz_phip, params.nvz);
 

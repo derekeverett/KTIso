@@ -4,6 +4,7 @@
 #include "Parameter.h"
 #include "NTScheme.cpp"
 #include "EquationOfState.cpp"
+#include "LandauMatch.cpp"
 #include <iostream>
 
 #ifdef _OPENACC
@@ -181,81 +182,6 @@ void propagateCollisionTerms(float ***density, float ***density_p, float ***dens
 
 }
 */
-
-void propagateITACollRK4(float ***density, float ***density_i4, float ***density_i3, float ***density_i2, float ***density_p,
-                        float *energyDensity, float **flowVelocity, float dt, parameters params)
-{
-  int ntot = params.ntot;
-  int nphip = params.nphip;
-  float eta_over_s = params.eta_over_s;
-  int nvz = params.nvz;
-  //float dvz = 2.0 / (nvz - 1);
-  float dvz_2 = 2.0 / (float)(nvz - 1);
-
-  int warn_flag = 1;
-
-  //update the density moment F based on ITA Eqns of Motion
-  #pragma omp parallel for
-  for (int is = 0; is < ntot; is++)
-  {
-    float u0 = flowVelocity[0][is];
-    float ux = flowVelocity[1][is];
-    float uy = flowVelocity[2][is];
-
-    float eps = energyDensity[is];
-
-    float T = temperatureFromEnergyDensity(eps);
-    float tau_iso = 5. * eta_over_s / T;
-
-    if ( (tau_iso < 3.0 * dt) && (warn_flag) )
-    {
-      printf("Warning: tau_iso = %f < 3*dt, energy density = %f , take smaller dt! \n", tau_iso, eps);
-      warn_flag = 0;
-    }
-    for (int iphip = 0; iphip < nphip; iphip++)
-    {
-      float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
-      //float vx = cos(phip);
-      //float vy = sin(phip);
-
-      for (int ivz = 0; ivz < nvz; ivz++)
-      {
-        //float vz = -1.0 + (float)ivz * dvz_2;
-        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
-        float thetap = acos(vz);
-        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
-        float vx = sin_thetap * cos(phip);
-        float vy = sin_thetap * sin(phip);
-
-        //collision term
-        float udotv = u0 - ux*vx - uy*vy;
-        float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
-        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
-
-        float F_1 = density_p[is][iphip][ivz];
-        float F_2 = density_i2[is][iphip][ivz];
-        float F_3 = density_i3[is][iphip][ivz];
-        float F_4 = density_i4[is][iphip][ivz];
-
-        float delta_F_1 = F_1 - F_iso;
-        float delta_F_2 = F_2 - F_iso;
-        float delta_F_3 = F_3 - F_iso;
-        float delta_F_4 = F_4 - F_iso;
-
-        float k1 = -1.0 * delta_F_1 * udotv / tau_iso;
-        float k2 = -1.0 * delta_F_2 * udotv / tau_iso;
-        float k3 = -1.0 * delta_F_3 * udotv / tau_iso;
-        float k4 = -1.0 * delta_F_4 * udotv / tau_iso;
-
-        //update the value of F(x; phip)
-        float weight_sum_slopes = (k1 + 2.0 * k2 + 2.0 * k3 + k4) / 6.0;
-        density[is][iphip][ivz] = density_p[is][iphip][ivz] + weight_sum_slopes * dt;
-
-        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
-      } //for (int ivz = 0; ivz < nvz; ivz++)
-    } //for (int iphip; iphip < nphip; iphip++)
-  } //for (int is = 0; is < ntot; is++)
-}
 
 
 // a toy model for the collision term that explicitly conserves energy
@@ -647,4 +573,163 @@ float calculateTauIsoMin(float *energyDensity, parameters params)
 
   return tau_iso_min;
 
+}
+
+
+void calc_k1_RK4(float ***k1_RK4, float ***density_p, float *energyDensity, float **flowVelocity, parameters params)
+{
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  float eta_over_s = params.eta_over_s;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
+
+  #pragma omp parallel for
+  for (int is = 0; is < ntot; is++)
+  {
+    float u0 = flowVelocity[0][is];
+    float ux = flowVelocity[1][is];
+    float uy = flowVelocity[2][is];
+
+    float eps = energyDensity[is];
+
+    float T = temperatureFromEnergyDensity(eps);
+    float tau_iso = 5. * eta_over_s / T;
+
+    for (int iphip = 0; iphip < nphip; iphip++)
+    {
+      float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
+
+      for (int ivz = 0; ivz < nvz; ivz++)
+      {
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
+        float thetap = acos(vz);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
+        float F = density_p[is][iphip][ivz];
+
+        //collision term
+        float udotv = u0 - ux*vx - uy*vy;
+        float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
+        float delta_F = F - F_iso;
+        k1_RK4[is][iphip][ivz] = -1.0 * delta_F * udotv / tau_iso;
+
+        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < nvz; ivz++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
+}
+
+void calc_next_k_RK4(float ***k_RK4, float ***kp_RK4, float ***density_i, float *energyDensity, float **flowVelocity, float dt, parameters params)
+{
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  float eta_over_s = params.eta_over_s;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
+
+  #pragma omp parallel for
+  for (int is = 0; is < ntot; is++)
+  {
+    float u0 = flowVelocity[0][is];
+    float ux = flowVelocity[1][is];
+    float uy = flowVelocity[2][is];
+    float eps = energyDensity[is];
+
+    float T = temperatureFromEnergyDensity(eps);
+    float tau_iso = 5. * eta_over_s / T;
+
+    for (int iphip = 0; iphip < nphip; iphip++)
+    {
+      float phip = float(iphip) * (2.0 * M_PI) / float(nphip);
+
+      for (int ivz = 0; ivz < nvz; ivz++)
+      {
+        float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
+        float thetap = acos(vz);
+        float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
+        float vx = sin_thetap * cos(phip);
+        float vy = sin_thetap * sin(phip);
+
+        float F = density_i[is][iphip][ivz];
+        //float kp = kp_RK4[is][iphip][ivz];
+        //float F_guess = F + (kp * dt);
+
+        //collision term
+        float udotv = u0 - ux*vx - uy*vy;
+        float F_iso = eps / powf(udotv, 4.0); //the isotropic moment F_iso(x;p),  check factors of 4pi everywhere!!!
+        if (nvz == 1) F_iso = eps / powf(udotv, 4.0) * 2.0;
+        //float delta_F = F_guess - F_iso;
+        float delta_F = F - F_iso;
+        k_RK4[is][iphip][ivz] = -1.0 * delta_F * udotv / tau_iso;
+
+        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < nvz; ivz++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
+}
+
+
+void propagateCollRK4ConvexComb(float ***density, float ***k1_RK4, float ***k2_RK4, float ***k3_RK4,float ***k4_RK4,
+  float ***density_p, float dt, parameters params)
+{
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  float eta_over_s = params.eta_over_s;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
+
+  int warn_flag = 1;
+
+  #pragma omp parallel for
+  for (int is = 0; is < ntot; is++)
+  {
+    for (int iphip = 0; iphip < nphip; iphip++)
+    {
+      for (int ivz = 0; ivz < nvz; ivz++)
+      {
+        float F = density_p[is][iphip][ivz];
+        float k1 = k1_RK4[is][iphip][ivz];
+        float k2 = k2_RK4[is][iphip][ivz];
+        float k3 = k3_RK4[is][iphip][ivz];
+        float k4 = k4_RK4[is][iphip][ivz];
+        float m = (k1 + 2.*k2 + 2.*k3 + k4) / 6.;
+        density[is][iphip][ivz] = F + (m * dt);
+
+        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < nvz; ivz++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
+}
+
+void propagateITACollRK4(float ***density, float ***density_p, float ***k_RK4, float dt, parameters params)
+{
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  float eta_over_s = params.eta_over_s;
+  int nvz = params.nvz;
+  float dvz_2 = 2.0 / (float)(nvz - 1);
+
+  int warn_flag = 1;
+
+  #pragma omp parallel for
+  for (int is = 0; is < ntot; is++)
+  {
+    for (int iphip = 0; iphip < nphip; iphip++)
+    {
+      for (int ivz = 0; ivz < nvz; ivz++)
+      {
+
+        float F = density_p[is][iphip][ivz];
+        float k = k_RK4[is][iphip][ivz];
+        //update the value of F(x; phip)
+        density[is][iphip][ivz] = F + k * dt;
+
+        //if (iphip == 0 && is == (ntot - 1) / 2) std::cout << "k1 * dt = " << k1 * dt << std::endl;
+      } //for (int ivz = 0; ivz < nvz; ivz++)
+    } //for (int iphip; iphip < nphip; iphip++)
+  } //for (int is = 0; is < ntot; is++)
 }

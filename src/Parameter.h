@@ -23,6 +23,7 @@ struct parameters
   float angular_acc_factor;
   float fs_acc_factor;
   float coll_acc_factor;
+  int coll_RK_order;
   //these are computed based on the chosen parameters above; they are constrained
   int ntot;
   //float TAU;
