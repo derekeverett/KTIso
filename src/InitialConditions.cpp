@@ -323,65 +323,10 @@ void initializeEllipticalMCGauss(float *density, float bx, float by, parameters 
   }
 }
 
-void readEnergyDensitySuperMCBlock(float *density, parameters params)
-{
-  /*
-  float lower_tolerance = 1.0e-3;
-
-  int ntot = params.ntot;
-  int nx = params.nx;
-  int ny = params.ny;
-  int ntot_ETA = params.ntot_ETA;
-  float ETA_WIdtH = params.ETA_WIdtH;
-  float ETA_FLAT = params.ETA_FLAT;
-  float DETA = params.DETA;
-
-  //first read in the transverse profile from superMC block data format
-  float temp = 0.0;
-  std::ifstream superMCFile;
-  superMCFile.open("initial_superMC_ed/2.dat");
-  if (superMCFile.is_open())
-  {
-    for (int ix = 0; ix < nx; ix++)
-    {
-      for (int iy = 0; iy < ny; iy++)
-      {
-        superMCFile >> temp;
-        for (int ieta = 0; ieta < ntot_ETA; ieta++) //copy the same value for all eta, then we will multiply by eta dependent function
-        {
-          int is = (ny * ntot_ETA) * ix + (ntot_ETA) * iy + ieta; //the column packed index spanning x, y, z
-          density[is] = temp;
-        }
-      }
-    }
-  }
-
-  else
-  {
-    printf("Could not find initial profile in initial_superMC_ed!");
-  }
-
-  superMCFile.close();
-
-  //now multiply by an eta-dependent profile; etaWidth is the width of the eta profile
-  for (int is = 0; is < ntot; is++)
-  {
-    int ix = is / (ny * ntot_ETA);
-    int iy = (is - (ny * ntot_ETA * ix))/ ntot_ETA;
-    int ieta = is - (ny * ntot_ETA * ix) - (ntot_ETA * iy);
-
-    float eta = (float)ieta * DETA  - ((float)(ntot_ETA-1)) / 2.0 * DETA;
-    //here we use a the same profile as GPU-VH (see arXiv:1608.06577v1 p. 38)
-    float arg = (-1.0) * (abs(eta) - ETA_FLAT) * (abs(eta) - ETA_FLAT) / (2.0 * ETA_WIdtH * ETA_WIdtH);
-    arg = arg * THETA_FUNCTION(abs(eta) - ETA_FLAT);
-    density[is] = density[is] * exp(arg) + lower_tolerance;
-  }
-  */
-}
 
 void readEnergyDensityBlock(float *density, parameters params)
 {
-  float e_scale_factor = 10.;
+  float e_scale_factor = 1.;
   //float lower_tolerance = 1.0e-3;
   int nx = params.nx;
   int ny = params.ny;
@@ -445,84 +390,7 @@ void initialize2Gaussians(float *density, float bx, float by, parameters params)
 
 }
 
-void readEnergyDensityTRENTO3DBlock(float *density, parameters params)
-{
-  /*
-  float lower_tolerance = 1.0e-3;
 
-  int ntot = params.ntot;
-  int nx = params.nx;
-  int ny = params.ny;
-  int ntot_ETA = params.ntot_ETA;
-  float ETA_WIdtH = params.ETA_WIdtH;
-  float ETA_FLAT = params.ETA_FLAT;
-  float DETA = params.DETA;
-
-  //first read in the transverse profile from superMC block data format
-  float temp = 0.0;
-  std::ifstream superMCFile;
-  superMCFile.open("initial_profiles/e.dat");
-  if (superMCFile.is_open())
-  {
-    //skip the eight line (l) header
-    std::string line;
-    for (int l = 0; l < 8; l++) getline(superMCFile, line);
-    for (int ix = 0; ix < nx; ix++)
-    {
-      for (int iy = 0; iy < ny; iy++)
-      {
-        for (int ieta = 0; ieta < ntot_ETA; ieta++)
-        {
-          int is = (ny * ntot_ETA) * ix + (ntot_ETA) * iy + ieta; //the column packed index spanning x, y, z
-          superMCFile >> temp;
-          density[is] = temp + lower_tolerance;
-        }
-      }
-    }
-  }
-
-  else
-  {
-    printf("Could not find initial profile in initial_profiles!");
-  }
-  superMCFile.close();
-  */
-}
-
-void readDensityFile(float *density, char name[255], parameters params)
-{
-  /*
-  int nx = params.nx;
-  int ny = params.ny;
-  int ntot_ETA = params.ntot_ETA;
-  float dx = params.dx;
-  float dy = params.dy;
-  float DETA = params.DETA;
-  float xmin = (-1.0) * ((float)(nx-1) / 2.0) * dx;
-  float ymin = (-1.0) * ((float)(ny-1) / 2.0) * dy;
-  float etamin = (-1.0) * ((float)(ntot_ETA-1) / 2.0) * DETA;
-  float x, y, eta, value;
-
-  char filename[255] = "";
-  sprintf(filename, "%s.dat", name);
-  std::ifstream infile;
-  infile.open(filename);
-  if (!infile)
-  {
-    printf("Couldn't open initial profile!\n");
-    exit(1);
-  }
-  while (infile >> x >> y >> eta >> value)
-  {
-    int ix = (int)round((x - xmin) / dx);
-    int iy = (int)round((y - ymin) / dy);
-    int ieta = (int)round((eta - etamin) / DETA);
-    int is = (ny * ntot_ETA * ix) + (ntot_ETA * iy) + ieta;
-    density[is] = value;
-  }
-  infile.close();
-  */
-}
 
 void initializeHomogeneous(float *density, parameters params) // bx is the x variance etc...
 {
@@ -561,11 +429,6 @@ int initializeEnergyDensity(float *energyDensity, std::vector<float> init_energy
   {
     readEnergyDensityBlock(energyDensity, params);
     printf("Reading from energy density file in initial_profiles/ \n");
-  }
-  else if (option == 4)
-  {
-    readEnergyDensitySuperMCBlock(energyDensity, params);
-    printf("Reading from superMC energy density file in initial_profiles/ \n");
   }
   else if (option == 5)
   {

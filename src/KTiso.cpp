@@ -9,8 +9,6 @@
 #include "HydroValidity.cpp"
 #include "Memoryf.cpp"
 #include "FileIO.cpp"
-//#include "FreezeOut.cpp"
-//#include "cornelius-c++-1.3/cornelius.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -178,8 +176,6 @@ public:
       float coll_acc_factor = params.coll_acc_factor;
       int coll_RK_order = params.coll_RK_order;
 
-      //if (coll_RK_order != 2 && coll_RK_order != 4) printf("Not a valid choice for coll_RK_order"); exit(-1);
-
       //set the value of the Landau matching time stored in class
       tau_LandauMatch = params.tf;
 
@@ -189,6 +185,9 @@ public:
       nphip *= angular_acc_factor; //multiply by angular accuracy factor to increase accuracy
       nphip = round(nphip / 2) * 2; //get nearest even integer
       params.nphip = max(100, nphip);
+
+      //TEMPORARY try setting nphip = 4 so that displacement vectors align with momenta vectors
+      //params.nphip = 4;
 
       printf("Parameters are ...\n");
       printf("(nx, ny, nphip, nvz) = (%d, %d, %d, %d)\n", params.nx, params.ny, params.nphip, params.nvz);
@@ -314,7 +313,6 @@ public:
       float ***k4_RK4 = NULL;
       k4_RK4 = calloc3dArrayf(k4_RK4, params.ntot, params.nphip, params.nvz);
 
-
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
       //initialize the flow velocity
@@ -348,33 +346,6 @@ public:
       //The main time step loop
       printf("Evolving F(x,y;phip,vz) via ITA Eqns of Motion \n");
 
-      //FREEZEOUT
-      //initialize cornelius for freezeout surface finding
-      /*
-      int dim;
-      float *lattice_spacing;
-      dim = 3;
-      lattice_spacing = new float[dim];
-      lattice_spacing[0] = dt;
-      lattice_spacing[1] = dx;
-      lattice_spacing[2] = dy;
-
-      float ****energy_density_evoution;
-      energy_density_evoution = calloc4dArrayf(energy_density_evoution, 2, nx, ny, 1);
-      //make an array to store all the hydrodynamic variables
-      //to be written to file once the freezeout surface is determined by the critical energy density
-      int n_hydro_vars = 10; //u1, u2, u3, e, pi11, pi12, pi13, pi22, pi23, Pi (the temperature and pressure are calclated with EoS)
-      float *****hydrodynamic_evoution;
-      hydrodynamic_evoution = calloc5dArrayf(hydrodynamic_evoution, n_hydro_vars, 2, nx, ny, 1);
-      //for 2+1D simulations
-      float ***hyperCube3D;
-      hyperCube3D = calloc3dArrayf(hyperCube3D, 2, 2, 2);
-      //open the freezeout surface file
-      ofstream freezeoutSurfaceFile;
-      freezeoutSurfaceFile.open("output/surface.dat");
-      */
-      //FREEZEOUT
-
       int write_freq = 1; //write to file every write_freq steps
       int icenter = ntot / 2; //the index in grid center
       float total_work = 0.0; //total work done by longitudinal pressure
@@ -388,7 +359,7 @@ public:
       //for (int it = 1; it < nt + 1; it++)
       while (t < tf)
       {
-        //*NOTE the time step needs to be much smaller than dx for the maccormack
+        //*NOTE the time step needs to be much smaller than dx for the MacCormack
         //scheme to propagate the streaming terms,
         //AND much smaller than the isotropization time to propagate the collision term.
         if (adapt_time) dt = std::min(dx / fs_acc_factor, tau_iso_min / coll_acc_factor);
@@ -401,68 +372,14 @@ public:
         float work = calculateLongitudinalWork(stressTensor, t-dt, dt, params);
         total_work += work;
 
-        //this propagates eqns of motion according to Bjorken expansion term (exact solution tau * F = const )
+        //this propagates eqns of motion according to Bjorken expansion term (exact solution tau * F(tau) = const )
         propagateBjorkenExpansion(density, density_p, t, dt, params);
         updateDensity(density, density_p, params);
 
-        //this propagates ITA eqns of motion terms corresponding to freestreaming
-        propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, dt, params);
+        tau_iso_min = propagate_FS_Coll_Strang(density, density_i, density_p, k1_RK4, k2_RK4, k3_RK4,k4_RK4,
+          stressTensor, energyDensity, energyDensity_p, flowVelocity,
+          hypertrigTable, vz_quad, t, dt, params);
         updateDensity(density, density_p, params);
-
-        //find the smallest isotropization time on grid
-        tau_iso_min = calculateTauIsoMin(energyDensity, params);
-        printf("min. tau_iso on grid : %f fm/c\n", tau_iso_min);
-        if (params.collisions)
-        {
-          //first find the current energy density and flow after advection updates
-          calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
-          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-
-          if (coll_RK_order == 2)
-          {
-            //RK2 w/ exact formula
-            //get estimate F(t + dt/2)
-            propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt/2., params);
-            //now evaluate the thermodynamic variables at t+dt/2
-            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params);
-            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-            //now propagate by dt using estimated slope
-            propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
-          }
-
-          else if (coll_RK_order == 4)
-          {
-            //RK4 w/ exact formula, assuming energy density and flow do not change!
-            calc_k1_RK4(k1_RK4, density_p, energyDensity, flowVelocity, params); //calculate k1 using current info
-            propagateITACollRK4(density_i, density_p, k1_RK4, dt/2., params); //get prediction of F(t + dt/2)
-            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
-            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
-
-            calc_next_k_RK4(k2_RK4, k1_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
-            propagateITACollRK4(density_i, density_p, k2_RK4, dt/2., params); //get prediction of F(t + dt/2)
-            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
-            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
-
-            calc_next_k_RK4(k3_RK4, k2_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
-            propagateITACollRK4(density_i, density_p, k3_RK4, dt, params); //get prediction of F(t + dt/2)
-            calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
-            solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
-
-            calc_next_k_RK4(k4_RK4, k3_RK4, density_i, energyDensity, flowVelocity, dt, params);
-
-            propagateCollRK4ConvexComb(density, k1_RK4, k2_RK4, k3_RK4, k4_RK4, density_p, dt, params);
-          }
-
-
-          propagateBoundaries(density, params);
-          updateDensity(density, density_p, params);
-
-          for (int is = 0; is < ntot; is++) energyDensity_p[is] = energyDensity[is];
-          calculateStressTensor(stressTensor, density, hypertrigTable, vz_quad, t, params);
-          solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-          for (int is = 0; is < ntot; is++) energyDensityDiffColl[is] = energyDensity[is] - energyDensity_p[is];
-
-        } // if (params.collisions)
 
         //this propagates ITA eqns of motion terms corresponding to physical energy-momentum source
         //the jetSource should be defined to be the moment F of the jet Particles which are being deposited
@@ -473,24 +390,6 @@ public:
         calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
         //solve the eigenvalue problem for the energy density and flow velocity
         solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-
-        //get momentum dependence at center of grid
-        //std::ofstream myfile;
-        //char filename[255] = "";
-        //sprintf(filename, "output/F_vz_phip_%.3f.dat", t);
-        //myfile.open(filename);
-        //for (int ivz = 0; ivz < params.nvz; ivz++)
-        //{
-        //  for (int iphip = 0; iphip < params.nphip; iphip++)
-        //  {
-        //    myfile << density_p[icenter][iphip][ivz] << " ";
-        //  }
-        //  myfile << "\n";
-        //}
-        //myfile.close();
-
-        //solve for shear stress also
-        //then use CORNELIUS to construct a freezeout surface
 
         if (it % write_freq == 0)
         {
@@ -552,7 +451,6 @@ public:
 
       float totalEnergyAfter = 0.0;
       for (int is = 0; is < params.ntot; is++) totalEnergyAfter += stressTensor[0][is];
-      //totalEnergyAfter *= (params.dx * params.dy * tf);
       totalEnergyAfter *= (params.dx * params.dy * t);
       printf("Total energy after evolution : %f \n", totalEnergyAfter);
 

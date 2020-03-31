@@ -7,6 +7,8 @@
 #include "Parameter.h"
 #include "NTScheme.cpp"
 #include "EquationOfState.cpp"
+#include "LandauMatch.cpp"
+#include "CollisionKernels.cpp"
 
 #ifdef _OPENACC
 #include <accelmath.h>
@@ -39,6 +41,11 @@ void propagateBjorkenExpansion(float ***density, float ***density_p, float t, fl
 
   //previous value of time
   float t_p = t - dt;
+
+  // freestream-milne and other models have interpreted the TRENTo output as lim tau0->0^+ ( tau_0 * e(tau0) )
+  // rather than e(tau0). In this case, when tau0 = 0^+, we will treat what is called
+  // F below (given by what is called the 'initial energy density') as tau0 * F(tau0). 
+  if (t_p == 0.) t_p = 1.0;
 
   //using is = ny * ix + iy
   int x_stride = ny;
@@ -440,4 +447,45 @@ void propagate(float ***density, float ***density_p,
   }
 
   else propagateCoordSpace(density, density_p, energyDensity, flowVelocity, vz_quad, dt, params);
+}
+
+//strang operator splitting is a 2nd order method
+// for two differential operators df/dt = A + B, the method combines the operators A(dt/2) * B(dt) * A(dt/2)
+float propagate_FS_Coll_Strang(float ***density, float ***density_i, float ***density_p, float ***k1_RK4, float ***k2_RK4, float ***k3_RK4,float ***k4_RK4,
+  float **stressTensor, float *energyDensity, float *energyDensity_p, float **flowVelocity,
+  float ***hypertrigTable, float **vz_quad, float t, float dt, parameters params)
+{
+
+  //find the smallest isotropization time on grid
+  float tau_iso_min = calculateTauIsoMin(energyDensity, params);
+  printf("min. tau_iso on grid : %f fm/c\n", tau_iso_min);
+
+  //this propagates ITA eqns of motion terms corresponding to freestreaming for dt/2
+  propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, dt/2., params);
+  updateDensity(density, density_p, params);
+
+  //set value of energy density before propagation of collision term for dt
+  //for (int is = 0; is < ntot; is++) energyDensity_p[is] = energyDensity[is];
+
+  if (params.collisions)
+  {
+    propagateCollisionTerms(density, density_i, density_p, k1_RK4, k2_RK4, k3_RK4,k4_RK4,
+      stressTensor, energyDensity, energyDensity_p, flowVelocity,
+      hypertrigTable, vz_quad, t, dt, params);
+
+    propagateBoundaries(density, params);
+    updateDensity(density, density_p, params);
+
+    calculateStressTensor(stressTensor, density, hypertrigTable, vz_quad, t, params);
+    solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+    //for (int is = 0; is < ntot; is++) energyDensityDiffColl[is] = energyDensity[is] - energyDensity_p[is];
+
+  } // if (params.collisions)
+
+  //this propagates ITA eqns of motion terms corresponding to freestreaming for dt/2
+  propagate(density, density_p, energyDensity, flowVelocity, vz_quad, t, dt/2., params);
+  updateDensity(density, density_p, params);
+
+  return tau_iso_min;
+
 }

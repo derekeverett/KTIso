@@ -150,40 +150,6 @@ void propagateITACollConvexComb(float ***density, float ***density_i, float ***d
 }
 
 
-/*
-void propagateCollisionTerms(float ***density, float ***density_p, float ***density_i,
-                float *energyDensity, float **flowVelocity,
-                float **vz_quad, float t, float dt, parameters params)
-{
-  //RK2
-  //first find the current energy density and flow after advection updates
-  calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
-  solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
-
-  //guess step to estimate the collision term at C[F(t + dt/2)]
-  propagateITAColl(density_i, density_p, energyDensity, flowVelocity, dt / 2.0, params);
-  propagateBoundaries(density_i, params);
-
-  //now propagate using the estimated C[F(t + dt/2)]
-  propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
-  propagateBoundaries(density, params);
-
-  //do a value swap
-  for (int is = 0; is < params.ntot; is++)
-  {
-    for (int iphip = 0; iphip < params.nphip; iphip++)
-    {
-      for (int ivz = 0; ivz < params.nvz; ivz++)
-      {
-        density_p[is][iphip][ivz] = density[is][iphip][ivz];
-      }
-    }
-  }
-
-}
-*/
-
-
 // a toy model for the collision term that explicitly conserves energy
 void propagateToyColl(float ***density, float ***density_p, parameters params)
 {
@@ -732,4 +698,50 @@ void propagateITACollRK4(float ***density, float ***density_p, float ***k_RK4, f
       } //for (int ivz = 0; ivz < nvz; ivz++)
     } //for (int iphip; iphip < nphip; iphip++)
   } //for (int is = 0; is < ntot; is++)
+}
+
+void propagateCollisionTerms(float ***density, float ***density_i, float ***density_p, float ***k1_RK4, float ***k2_RK4, float ***k3_RK4,float ***k4_RK4,
+  float **stressTensor, float *energyDensity, float *energyDensity_p, float **flowVelocity,
+  float ***hypertrigTable, float **vz_quad, float t, float dt, parameters params)
+{
+  int coll_RK_order = params.coll_RK_order;
+
+  //first find the current energy density and flow after advection updates
+  calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t, params);
+  solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+
+  if (coll_RK_order == 2)
+  {
+    //RK2 w/ exact formula
+    //get estimate F(t + dt/2)
+    propagateITACollExact(density_i, density_p, energyDensity, flowVelocity, dt/2., params);
+    //now evaluate the thermodynamic variables at t+dt/2
+    calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params);
+    solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
+    //now propagate by dt using estimated slope
+    propagateITACollConvexComb(density, density_i, density_p, energyDensity, flowVelocity, dt, params);
+  }
+
+  else if (coll_RK_order == 4)
+  {
+    //RK4 w/ exact formula, assuming energy density and flow do not change!
+    calc_k1_RK4(k1_RK4, density_p, energyDensity, flowVelocity, params); //calculate k1 using current info
+    propagateITACollRK4(density_i, density_p, k1_RK4, dt/2., params); //get prediction of F(t + dt/2)
+    calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+    solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+    calc_next_k_RK4(k2_RK4, k1_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
+    propagateITACollRK4(density_i, density_p, k2_RK4, dt/2., params); //get prediction of F(t + dt/2)
+    calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+    solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+    calc_next_k_RK4(k3_RK4, k2_RK4, density_i, energyDensity, flowVelocity, dt/2., params);
+    propagateITACollRK4(density_i, density_p, k3_RK4, dt, params); //get prediction of F(t + dt/2)
+    calculateStressTensor(stressTensor, density_i, hypertrigTable, vz_quad, t, params); //get prediction of Tmunu(t + dt/2)
+    solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);//get prediction of e, u^mu(t + dt/2)
+
+    calc_next_k_RK4(k4_RK4, k3_RK4, density_i, energyDensity, flowVelocity, dt, params);
+
+    propagateCollRK4ConvexComb(density, k1_RK4, k2_RK4, k3_RK4, k4_RK4, density_p, dt, params);
+  }
 }
