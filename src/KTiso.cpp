@@ -159,6 +159,7 @@ public:
       params.fs_acc_factor = 5.0;
       params.coll_acc_factor = 8.0;
       params.coll_RK_order = 4;
+      params.v_fs = 1.0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -175,6 +176,7 @@ public:
       float fs_acc_factor = params.fs_acc_factor;
       float coll_acc_factor = params.coll_acc_factor;
       int coll_RK_order = params.coll_RK_order;
+      float v_fs = params.v_fs;
 
       //set the value of the Landau matching time stored in class
       tau_LandauMatch = params.tf;
@@ -210,6 +212,8 @@ public:
         printf("Time step accuracy factor FS terms : %.2f \n", fs_acc_factor);
         printf("Time step accuracy factor Collision terms : %.2f \n", coll_acc_factor);
       }
+
+      printf("Freestreaming velocity scale : %.2f \n", v_fs);
 
       if (params.eos_type == 1) printf("Using EoS : Conformal \n");
       else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");

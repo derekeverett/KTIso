@@ -44,7 +44,7 @@ void propagateBjorkenExpansion(float ***density, float ***density_p, float t, fl
 
   // freestream-milne and other models have interpreted the TRENTo output as lim tau0->0^+ ( tau_0 * e(tau0) )
   // rather than e(tau0). In this case, when tau0 = 0^+, we will treat what is called
-  // F below (given by what is called the 'initial energy density') as tau0 * F(tau0). 
+  // F below (given by what is called the 'initial energy density') as tau0 * F(tau0).
   if (t_p == 0.) t_p = 1.0;
 
   //using is = ny * ix + iy
@@ -83,6 +83,7 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
   float dx = params.dx;
   int nvz = params.nvz;
   float dvz_2 = 2.0 / (float)(nvz - 1);
+  float v_fs = params.v_fs;
 
   //using is = ny * ix + iy
   int x_stride = ny;
@@ -110,6 +111,9 @@ void propagateX(float ***density, float ***density_p, float dt, parameters param
           float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
           float vx = sin_thetap * cos(phip);
           //float vy = sin_thetap * sin(phip);
+
+          //non-conformal streaming term if v_fs = |v| < 1.0
+          vx *= v_fs;
 
           float F = density_p[is][iphip][ivz];
           float F_px = density_p[is_r][iphip][ivz];
@@ -150,6 +154,7 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
   float dy = params.dy;
   int nvz = params.nvz;
   float dvz_2 = 2.0 / (float)(nvz - 1);
+  float v_fs = params.v_fs;
 
   //using is = ny * ix + iy
   int y_stride = 1;
@@ -177,6 +182,9 @@ void propagateY(float ***density, float ***density_p, float dt, parameters param
           float sin_thetap = (nvz > 1) ? sin(thetap) : 1.0;
           //float vx = sin_thetap * cos(phip);
           float vy = sin_thetap * sin(phip);
+
+          //non-conformal streaming term if v_fs = |v| < 1.0
+          vy *= v_fs;
 
           float F = density_p[is][iphip][ivz];
           float F_py = density_p[is_t][iphip][ivz];
@@ -216,6 +224,8 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
   int nvz = params.nvz;
   float dvz_2 = 2.0 / (float)(nvz - 1);
 
+  float v_fs = params.v_fs; 
+
   //update the density moment F based on ITA Eqns of Motion
   #pragma omp parallel for
   for (int is = 0; is < ntot; is++)
@@ -228,6 +238,9 @@ void propagateVz(float ***density, float ***density_p, float **vz_quad, float ta
         float vz = (nvz > 1) ? -1.0 + (float)ivz * dvz_2 : 0.0;
         //float vz = vz_quad[ivz][0];
         //float dvz = vz_quad[ivz][1];
+
+        //non-conformal streaming term if v_fs = |v| < 1.0
+        vz *= v_fs;
 
         int ivz_l = ivz - 1;
         int ivz_r = ivz + 1;
