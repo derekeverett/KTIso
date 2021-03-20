@@ -4,6 +4,7 @@
 #include <fstream>
 #include <string>
 #include <vector>
+#include <random>
 #include "Parameter.h"
 #define THETA_FUNCTION(X) ((float)X < (float)0 ? (float)0 : (float)1)
 
@@ -76,6 +77,50 @@ void initializeDensity(float *energyDensity, float ***density, float **vz_quad, 
       } //for (int iphip = 0; iphip < nphip; iphip++)
     } //for (int is = 0; is < ntot; is++)
   }
+}
+
+
+//this function assumes the initial energy density has already been read, and
+//initializes the phi_p distribution following the files provided in initial_psi_profiles
+//this function is only written for boost invariant mode !
+void initializeDensity_color_domains(float *energyDensity, float ***density, float **vz_quad, parameters params)
+{
+  int ntot = params.ntot;
+  int nphip = params.nphip;
+  float dphip = 2. * M_PI / params.nphip; 
+      
+  //get the momentum modulation phase velocity
+  float w_D = params.w_D;
+    
+  float dx = params.dx;
+  float dy = params.dy;
+  int nx = params.nx;
+  int ny = params.ny;
+  
+  std::ifstream blockFile;
+  blockFile.open("initial_psi_profiles/psi.dat");
+  float psi_p = 0.;
+
+  //now loop over all cells in each patch
+  for (int ix = 0; ix < nx; ix++)
+    {
+    for (int iy = 0; iy < ny; iy++)
+        {
+        int is = (ny) * ix + iy; //the column packed index spanning x, y
+        float e0 = energyDensity[is]; //get the value of the initial energy density
+        
+        blockFile >> psi_p; //get the value of the color domain phase angle psi from file
+        for (int iphip = 0; iphip < nphip; iphip++)
+            {
+            float phi_p = iphip * dphip;
+            float angle_fct_N;
+            if (w_D == 0) angle_fct_N = 1. / (2. * M_PI); 
+            else angle_fct_N = w_D / (2. * sin(M_PI*w_D)); // normalization of the angular function
+            float angle_fct = angle_fct_N * cos(w_D*(phi_p - psi_p)); // the normalized angular function
+            density[is][iphip][0] = 2.0 * e0 * angle_fct; // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z) 
+            } //for (int iphip = 0; iphip < nphip; iphip++)
+        }
+    }
 }
 
 //this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz

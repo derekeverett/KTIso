@@ -25,6 +25,7 @@ struct parameters
   float coll_acc_factor;
   int coll_RK_order;
   float v_fs;
+  float w_D;
   //these are computed based on the chosen parameters above; they are constrained
   int ntot;
   //float TAU;
