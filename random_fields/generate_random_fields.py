@@ -41,9 +41,6 @@ def main():
                 dx=float(words[1])
             elif words[0]=='dy':
                 dy=float(words[1])
-            #elif words[0]=='nphip':
-            #nphip=float(words[1])
-        nphip=100
     print('#############################################################')
     print('Parameter values that will be used to generate random fields')
     print(f'v_x {v_x}')
@@ -53,7 +50,7 @@ def main():
     print(f'psi corelation length scale {len_scale_psi}')
     print('#############################################################')
     print('Grid parameters that have been read in from ita_input file')
-    print(f'nx {nx}, ny {ny}, dx {dx}, dy {dy}, nphip {nphip}')
+    print(f'nx {nx}, ny {ny}, dx {dx}, dy {dy}')
 
     with open('random_field_param.txt','w') as f:
         f.writelines(f'vx_vy_mean = {v_x}\n')
