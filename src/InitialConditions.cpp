@@ -81,7 +81,8 @@ void initializeDensity(float *energyDensity, float ***density, float **vz_quad, 
 
 
 //this function assumes the initial energy density has already been read, and
-//initializes the phi_p distribution following the files provided in initial_psi_profiles
+//initializes the phi_p and v_2 distribution following the files provided in
+// random_fields/initial_psi_profiles and random_fields/initial_v2_profiles
 //this function is only written for boost invariant mode !
 void initializeDensity_color_domains(float *energyDensity, float ***density, float **vz_quad, parameters params)
 {
@@ -90,7 +91,7 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
   float dphip = 2. * M_PI / params.nphip;
 
   //get the momentum modulation phase velocity
-  float w_D = params.w_D;
+  //float w_D = params.w_D;
 
   float dx = params.dx;
   float dy = params.dy;
@@ -103,7 +104,18 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
   blockFile2.open("/random_fields/initial_v2_profiles/v2.dat");
   float psi_p = 0.;
   float v2 = 0.;
-
+  //Print the random field parameters used
+  std::fstream newfile;
+  newfile.open("random_fields/random_field_param.txt",std::ios::in);
+  std::cout << "Using initial momentum anisotropic fields with the parameters :" << std::endl;
+  if (newfile.is_open()){   //checking whether the file is open
+     std::string tp;
+     while(getline(newfile, tp)){ //read data from file object and put it into string.
+        std::cout << tp << "  "; //print the data of the string
+     }
+  std::cout<<'\n';
+   }
+  newfile.close(); //close the file object.
   //now loop over all cells in each patch
   for (int ix = 0; ix < nx; ix++)
     {
@@ -113,13 +125,13 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
         float e0 = energyDensity[is]; //get the value of the initial energy density
 
         blockFile1 >> psi_p; //get the value of the color domain phase angle psi from file
-        blockFile2 >> v2; //get the value of the color domain phase angle psi from file
+        blockFile2 >> v2; //get the value of the color domain eliptic flow magnitude from file
 
         for (int iphip = 0; iphip < nphip; iphip++)
             {
             float phi_p = iphip * dphip;
-            float fourier_sum = 1. + 2. * v2 * cos(2. * (phi_p-psi_p));
-            density[is][iphip][0] = 2.0 * e0 * fourier_sum/(2. * M_PI); // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z)
+            float fourier_sum = 1. + 2. * v2 * cos(2. * (phi_p-psi_p)); //No need to include a 2pi factor in the denominator.
+            density[is][iphip][0] = 2.0 * e0 * fourier_sum; // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z)
             } //for (int iphip = 0; iphip < nphip; iphip++)
         }
     }
