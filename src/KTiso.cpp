@@ -160,7 +160,6 @@ public:
       params.coll_acc_factor = 8.0;
       params.coll_RK_order = 4;
       params.v_fs = 1.0;
-      params.w_D = 0.0;
       //read in chosen parameters from freestream_input if such a file exists
       readInParameters(params);
       //define some useful combinations
@@ -215,8 +214,8 @@ public:
       }
 
       printf("Freestreaming velocity scale : %.2f \n", v_fs);
-      
-      printf("Phase velocity of 'color domains' : %.2f  \n", params.w_D);
+
+      //printf("Phase velocity of 'color domains' : %.2f  \n", params.w_D);
 
       if (params.eos_type == 1) printf("Using EoS : Conformal \n");
       else if (params.eos_type == 2) printf("Using EoS : Wuppertal-Budhapest \n");
@@ -331,10 +330,11 @@ public:
       //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
       //isotropic initialization in phi_p
       //initializeDensity(energyDensity, density_p, vz_quad, params);
-      
+
       //convert the energy density profile into the density profile F(t, x, y ; phip, xi) to be propagated
-      //anisotropic initialization in phi_p with phase velocity w_D and 
+      //anisotropic initialization in phi_p with
       //domain phase angle psi_p given by initial_psi_profiles/psi.dat
+      //and a v2 fourier coefficient given by initial_v2_profiles/v2.dat
       initializeDensity_color_domains(energyDensity, density_p, vz_quad, params);
 
       //calculate entries in trig table - time independent in cartesian case

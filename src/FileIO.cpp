@@ -217,8 +217,6 @@ void readInParameters(struct parameters &params)
     params.coll_RK_order = dummyInt;
     fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
     params.v_fs = dummyFloat;
-    fscanf(fileIn, "%s\t%f\n", dummyChar, &dummyFloat);
-    params.w_D = dummyFloat;
 
     fclose(fileIn);
   }
