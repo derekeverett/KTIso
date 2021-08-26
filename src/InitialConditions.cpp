@@ -87,19 +87,22 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
 {
   int ntot = params.ntot;
   int nphip = params.nphip;
-  float dphip = 2. * M_PI / params.nphip; 
-      
+  float dphip = 2. * M_PI / params.nphip;
+
   //get the momentum modulation phase velocity
   float w_D = params.w_D;
-    
+
   float dx = params.dx;
   float dy = params.dy;
   int nx = params.nx;
   int ny = params.ny;
-  
-  std::ifstream blockFile;
-  blockFile.open("initial_psi_profiles/psi.dat");
+
+  std::ifstream blockFile1;
+  blockFile1.open("/random_fields/initial_psi_profiles/psi.dat");
+  std::ifstream blockFile2;
+  blockFile2.open("/random_fields/initial_v2_profiles/v2.dat");
   float psi_p = 0.;
+  float v2 = 0.;
 
   //now loop over all cells in each patch
   for (int ix = 0; ix < nx; ix++)
@@ -108,16 +111,15 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
         {
         int is = (ny) * ix + iy; //the column packed index spanning x, y
         float e0 = energyDensity[is]; //get the value of the initial energy density
-        
-        blockFile >> psi_p; //get the value of the color domain phase angle psi from file
+
+        blockFile1 >> psi_p; //get the value of the color domain phase angle psi from file
+        blockFile2 >> v2; //get the value of the color domain phase angle psi from file
+
         for (int iphip = 0; iphip < nphip; iphip++)
             {
             float phi_p = iphip * dphip;
-            float angle_fct_N;
-            if (w_D == 0) angle_fct_N = 1. / (2. * M_PI); 
-            else angle_fct_N = w_D / (2. * sin(M_PI*w_D)); // normalization of the angular function
-            float angle_fct = angle_fct_N * cos(w_D*(phi_p - psi_p)); // the normalized angular function
-            density[is][iphip][0] = 2.0 * e0 * angle_fct; // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z) 
+            float fourier_sum = 1. + 2. * v2 * cos(2. * (phi_p-psi_p));
+            density[is][iphip][0] = 2.0 * e0 * fourier_sum/(2. * M_PI); // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z)
             } //for (int iphip = 0; iphip < nphip; iphip++)
         }
     }
