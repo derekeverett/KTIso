@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 
 def parse():
     parser = argparse.ArgumentParser(description='Generates random fields forv2 and psi fields')
-    parser.add_argument('mean', metavar='v_x = v_y =', type=float, default=0.01
+    parser.add_argument('mean', metavar='v_x,v_y mean', type=float, default=0.01
                     ,help='mean of gaussian fields used to generate the besel gaussian')
-    parser.add_argument('v2_var', metavar='Variance of v_2', type=float, default=0.01
+    parser.add_argument('v2_var', metavar='variance_of_v_2', type=float, default=0.01
                     ,help='variance of gaussian fields used to generate the besel gaussian')
     parser.add_argument('v2_l', metavar='length_scale_v2', type=float, default=2
                     ,help='corelation length scale for v2 field')
@@ -55,6 +55,12 @@ def main():
     print('Grid parameters that have been read in from ita_input file')
     print(f'nx {nx}, ny {ny}, dx {dx}, dy {dy}, nphip {nphip}')
 
+    with open('random_field_param.txt','w') as f:
+        f.writelines(f'vx_vy_mean = {v_x}\n')
+        f.writelines(f'vx_vy_variance = {v_var}\n')
+        f.writelines(f'v2_field_corelation_length = {len_scale_v2}\n')
+        f.writelines(f'psi_field_corelation_length = {len_scale_psi}\n')
+
     os.makedirs('initial_psi_profiles',exist_ok=True)
     os.makedirs('initial_v2_profiles',exist_ok=True)
 
@@ -89,7 +95,7 @@ def main():
     ax.set_yticklabels(np.round(tick_labels))
     ax.set_xlabel('x [fm]')
     ax.set_ylabel('y [fm]')
-
+    ax.text(0.1,0.1,f'Mean={v_x}, Variance={v_var}, $v2_l$={len_scale_v2}', color='w', transform=ax.transAxes, fontsize=12)
     #psi uniform random field
     ax=axs[1]
 
@@ -104,8 +110,11 @@ def main():
     ax.set_yticklabels(np.round(tick_labels))
     ax.set_xlabel('x [fm]')
     ax.set_ylabel('y [fm]')
+    ax.text(0.1,0.1,f'$\psi_l$ {len_scale_psi}', color='w', transform=ax.transAxes, fontsize=12)
+
     #srfx.plot()
     #srfy.plot()
+    plt.tight_layout()
     fig.savefig('generated_fields',dpi=100)
 
     np.savetxt('initial_psi_profiles/psi.dat', fieldpsi)
