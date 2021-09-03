@@ -1,4 +1,4 @@
-vx_vy_mean = 0.01
-vx_vy_variance = 0.01
-v2_field_corelation_length = 3.0
-psi_field_corelation_length = 6.0
+vx_vy_mean = 0.45
+vx_vy_variance = 1e-06
+v2_field_corelation_length = 5.0
+psi_field_corelation_length = 5.0
