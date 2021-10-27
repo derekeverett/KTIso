@@ -322,7 +322,7 @@ public:
       //initialize energy density
       initializeEnergyDensity(energyDensity, init_energy_density, params);
       //initialize the flow velocity
-      initializeFlow(flowVelocity, params);
+      //initializeFlow(flowVelocity, params);
       //write initial energy density  to file
       writeScalarToFile(energyDensity, (char *)"initial_e", params);
       writeScalarToFileProjection(energyDensity, (char *)"initial_e_projection", params);
@@ -345,11 +345,13 @@ public:
 
       //calculate total energy to check convergence
       calculateStressTensor(stressTensor, density_p, hypertrigTable, vz_quad, t0, params);
+
       float totalEnergy = 0.0;
       for (int is = 0; is < params.ntot; is++) totalEnergy += stressTensor[0][is];
       //totalEnergy *= (params.dx * params.dy * t0);
       totalEnergy *= (params.dx * params.dy * t0);
       printf("Total energy before evolution : %f \n", totalEnergy);
+      solveEigenSystem(stressTensor, energyDensity, flowVelocity, params);
 
       //useful for plotting the momentum dependence of distribution function
       float **F_vz_phip = NULL;
@@ -429,18 +431,27 @@ public:
 
           char e_file[255] = "";
           char t00_file[255] = "";
+          char txx_file[255] = "";
+          char tyy_file[255] = "";
           char ux_file[255] = "";
+          char uy_file[255] = "";
 	        char un_file[255] = "";
           char e_diff_file[255] = "";
           sprintf(e_file, "e_projection_%.3f", t);
           sprintf(t00_file, "t00_projection_%.3f", t);
+          sprintf(txx_file, "txx_projection_%.3f", t);
+          sprintf(tyy_file, "tyy_projection_%.3f", t);
           sprintf(ux_file, "ux_projection_%.3f", t);
+          sprintf(uy_file, "uy_projection_%.3f", t);
 	        sprintf(un_file, "un_projection_%.3f", t);
           sprintf(e_diff_file, "e_diff_projection_%.3f", t);
           writeScalarToFileProjection(energyDensityDiffColl, e_diff_file, params);
           writeScalarToFileProjection(energyDensity, e_file, params);
           writeVectorToFileProjection(stressTensor, t00_file, 0, params);
+          writeVectorToFileProjection(stressTensor, txx_file, 4, params);
+          writeVectorToFileProjection(stressTensor, tyy_file, 7, params);
           writeVectorToFileProjection(flowVelocity, ux_file, 1, params);
+          writeVectorToFileProjection(flowVelocity, uy_file, 2, params);
 	        writeVectorToFileProjection(flowVelocity, un_file, 3, params);
         }
 
