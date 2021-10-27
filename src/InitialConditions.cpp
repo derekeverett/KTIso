@@ -88,7 +88,7 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
 {
   int ntot = params.ntot;
   int nphip = params.nphip;
-  float dphip = 2. * M_PI / params.nphip;
+  float dphip = (2.0 * M_PI) / float(params.nphip);
 
   //get the momentum modulation phase velocity
   //float w_D = params.w_D;
@@ -98,12 +98,7 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
   int nx = params.nx;
   int ny = params.ny;
 
-  std::ifstream blockFile1;
-  blockFile1.open("/random_fields/initial_psi_profiles/psi.dat");
-  std::ifstream blockFile2;
-  blockFile2.open("/random_fields/initial_v2_profiles/v2.dat");
-  float psi_p = 0.;
-  float v2 = 0.;
+
   //Print the random field parameters used
   std::fstream newfile;
   newfile.open("random_fields/random_field_param.txt",std::ios::in);
@@ -117,6 +112,17 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
    }
   newfile.close(); //close the file object.
   //now loop over all cells in each patch
+  std::ifstream blockFile1;
+  blockFile1.open("random_fields/initial_psi_profiles/psi.dat");
+  std::ifstream blockFile2;
+  blockFile2.open("random_fields/initial_v2_profiles/v2.dat");
+  float psi_p = 0.;
+  float v2 = 0.;
+  float integral_temp = 0.0;
+  if (blockFile1.is_open())
+  {
+  if (blockFile2.is_open())
+  {
   for (int ix = 0; ix < nx; ix++)
     {
     for (int iy = 0; iy < ny; iy++)
@@ -126,15 +132,38 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
 
         blockFile1 >> psi_p; //get the value of the color domain phase angle psi from file
         blockFile2 >> v2; //get the value of the color domain eliptic flow magnitude from file
+        //std::cout << "v2 value loaded :" << v2 <<std::endl;
 
         for (int iphip = 0; iphip < nphip; iphip++)
             {
+            float psi_p = (M_PI/2); //This is for testing. We will remove this soon
             float phi_p = iphip * dphip;
-            float fourier_sum = 1. + 2. * v2 * cos(2. * (phi_p-psi_p)); //No need to include a 2pi factor in the denominator.
+            if (v2 > 0.5)
+            {
+              v2 = 0.5; // put an anchor at 0.5 to avoid unphysical negative energies. 
+            }
+            float fourier_sum = (1. + 2. * v2 * cos(2. * (phi_p-psi_p))); //No need to include a 2pi factor in the denominator.
+            //float fourier_sum = 1. + 2. * 0 * cos(2. * (phi_p-0.));
             density[is][iphip][0] = 2.0 * e0 * fourier_sum; // multiply the initial energy density by the phi_p angular fct., remember factor of two for boost-invar F(v_z) ~ delta(v_z)
+            //integral_temp +=  density[is][iphip][0];
+            //integral_temp += (dphip / (4.0 * M_PI)) * (density[is][iphip][0])*(params.dx * params.dy * params.t0);
+
             } //for (int iphip = 0; iphip < nphip; iphip++)
         }
     }
+}
+else
+{
+  printf("Could not find random v2 profile in random_fields!");
+}
+blockFile2.close();
+}
+else
+{
+  printf("Could not find random psi profile in random_fields!");
+}
+blockFile1.close();
+//std::cout << "Total integrated energy here is  " << integral_temp << std::endl;
 }
 
 //this creates the initial F function, a function of spatial coordinates and momentum phip and velocity vz
