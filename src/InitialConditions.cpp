@@ -136,11 +136,11 @@ void initializeDensity_color_domains(float *energyDensity, float ***density, flo
 
         for (int iphip = 0; iphip < nphip; iphip++)
             {
-            float psi_p = (M_PI/2); //This is for testing. We will remove this soon
+            //float psi_p = (M_PI/2); //This is for testing. We will remove this soon
             float phi_p = iphip * dphip;
-            if (v2 > 0.5)
+            if (v2 >= 0.5)
             {
-              v2 = 0.5; // put an anchor at 0.5 to avoid unphysical negative energies. 
+              v2 = 0.49999; // put an anchor at 0.5 to avoid unphysical negative energies.
             }
             float fourier_sum = (1. + 2. * v2 * cos(2. * (phi_p-psi_p))); //No need to include a 2pi factor in the denominator.
             //float fourier_sum = 1. + 2. * 0 * cos(2. * (phi_p-0.));
